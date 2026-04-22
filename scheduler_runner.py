@@ -59,17 +59,18 @@ def _run_collection(app):
         from app.processors.content_generator import ContentGenerator
         from app import db
 
+        from config import Config
         sources = Source.query.filter_by(is_active=True).all()
         if not sources:
             logger.info("No active sources configured")
             return
 
-        gen = ContentGenerator(app.config)
+        gen = ContentGenerator(Config)
         total_collected = 0
 
         for source in sources:
             try:
-                collector = get_collector_for_source(source, app.config)
+                collector = get_collector_for_source(source, Config)
                 raw_items = collector.collect()
                 saved = collector.save_updates(db.session, raw_items)
                 total_collected += saved

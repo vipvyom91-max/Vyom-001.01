@@ -40,6 +40,7 @@ def _seed_default_sources():
         ("PW Official (Twitter/X)",   "twitter",  "PhysicsWallah"),
         ("Alakh Pandey (Twitter/X)",  "twitter",  "AlakhPandey01"),
         ("PW Website",                "website",  "https://pw.live"),
+        ("PW Courses",                "website",  "https://pw.live/courses"),
     ]
     for name, stype, ident in defaults:
         src = Source(name=name, source_type=stype, identifier=ident)

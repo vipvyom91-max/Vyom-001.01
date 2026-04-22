@@ -7,6 +7,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify, c
 from app.dashboard import dashboard_bp
 from app import db
 from app.models import Update, Post, Source, ScheduledPost, CollectionLog, DailyStat
+from config import Config as AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,7 @@ def star_update(uid):
 def promote_update(uid):
     update = Update.query.get_or_404(uid)
     from app.processors.content_generator import ContentGenerator
-    gen = ContentGenerator(current_app.config)
+    gen = ContentGenerator(AppConfig)
     post = gen.process_update(update)
     if post:
         db.session.add(post)
@@ -178,7 +179,7 @@ def regenerate_caption(pid):
     if not post.update_id:
         return jsonify({"error": "No source update linked"}), 400
     from app.processors.caption_ai import CaptionAI
-    ai = CaptionAI(current_app.config)
+    ai = CaptionAI(AppConfig)
     result = ai.generate_caption(post.update, post.post_type)
     post.caption = result["caption"]
     post.hashtags = result["hashtags"]
@@ -194,7 +195,7 @@ def regenerate_image(pid):
     if not post.update_id:
         return jsonify({"error": "No source update linked"}), 400
     from app.processors.image_creator import ImageCreator
-    creator = ImageCreator(current_app.config)
+    creator = ImageCreator(AppConfig)
     post_type = request.form.get("post_type", "feed")
     if post_type == "story":
         path = creator.create_story_image(post.update, post.template_name)
@@ -210,7 +211,7 @@ def regenerate_image(pid):
 def schedule_post(pid):
     post = Post.query.get_or_404(pid)
     from app.instagram.post_scheduler import PostScheduler
-    sched = PostScheduler(current_app.config)
+    sched = PostScheduler(AppConfig)
     scheduled_at_str = request.form.get("scheduled_at", "")
     if scheduled_at_str:
         try:
@@ -228,7 +229,7 @@ def schedule_post(pid):
 def post_now(pid):
     post = Post.query.get_or_404(pid)
     from app.instagram.poster import InstagramPoster
-    poster = InstagramPoster(current_app.config)
+    poster = InstagramPoster(AppConfig)
     try:
         ig_id = poster.post_feed_image(post)
         post.status = "posted"
@@ -340,11 +341,11 @@ def api_collect_now():
         from app.collectors import get_collector_for_source
         from app.processors.content_generator import ContentGenerator
         sources = Source.query.filter_by(is_active=True).all()
-        gen = ContentGenerator(current_app.config)
+        gen = ContentGenerator(AppConfig)
         total = 0
         for source in sources:
             try:
-                collector = get_collector_for_source(source, current_app.config)
+                collector = get_collector_for_source(source, AppConfig)
                 raw_items = collector.collect()
                 saved = collector.save_updates(db.session, raw_items)
                 source.last_checked_at = datetime.utcnow()

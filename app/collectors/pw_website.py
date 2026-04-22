@@ -13,9 +13,8 @@ logger = logging.getLogger(__name__)
 PW_BASE = "https://pw.live"
 
 TARGETS = [
-    f"{PW_BASE}/study-material",
+    PW_BASE,
     f"{PW_BASE}/courses",
-    f"{PW_BASE}/videos",
 ]
 
 PCB_KEYWORDS = [
