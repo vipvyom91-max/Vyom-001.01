@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}{% if post %}Edit Post #{{ post.id }}{% else %}New Post{% endif %} · PW PCB Manager{% endblock %}
+{% block page_title %}{% if post %}Edit Post{% else %}New Post{% endif %}{% endblock %}
+
+{% block head %}
+<style>
+  .phone-frame { width: 260px; border: 8px solid #333; border-radius: 36px; overflow: hidden; background: #000; flex-shrink: 0; }
+  .phone-screen { background: #111; }
+  .phone-caption { font-size: 11px; line-height: 1.4; color: #eee; padding: 8px 10px; max-height: 120px; overflow: hidden; }
+  .phone-hashtags { font-size: 10px; color: #5b9bd5; padding: 0 10px 8px; }
+  .template-radio { display: none; }
+  .template-option { cursor: pointer; border: 2px solid transparent; border-radius: 8px; overflow: hidden; }
+  .template-radio:checked + .template-option { border-color: #7c3aed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- Left: edit panel -->
+  <div class="col-lg-7">
+    <form method="POST"
+          action="{{ url_for('dashboard.save_post', pid=post.id) if post else url_for('dashboard.new_post') }}"
+          id="post-form">
+
+      <!-- Source update info -->
+      {% if update %}
+      <div class="pw-card mb-3 p-3">
+        <div class="d-flex gap-3 align-items-start">
+          {% if update.media_url and not update.media_url.startswith('[') %}
+          <img src="{{ update.media_url }}" width="60" height="60" style="object-fit:cover;border-radius:6px;flex-shrink:0">
+          {% endif %}
+          <div>
+            <div class="fw-semibold">{{ update.title }}</div>
+            <small class="text-muted">{{ update.source.name }} · {{ update.content_type }} · {{ update.category }}</small>
+            {% if update.url %}
+            <div><a href="{{ update.url }}" target="_blank" class="text-accent small">View Source ↗</a></div>
+            {% endif %}
+          </div>
+          <span class="badge ms-auto {% if update.relevance_score >= 0.7 %}bg-success{% elif update.relevance_score >= 0.4 %}bg-warning{% else %}bg-secondary{% endif %}">
+            Score {{ "%.0f"|format(update.relevance_score * 100) }}%
+          </span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Caption -->
+      <div class="pw-card mb-3 p-3">
+        <label class="form-label fw-semibold">Caption <small class="text-muted">(max 2200 chars)</small></label>
+        <textarea name="caption" id="caption-ta" class="form-control bg-dark text-light border-secondary"
+                  rows="8" maxlength="2200"
+                  oninput="updatePreview(); updateCharCount(this)">{{ post.caption if post else '' }}</textarea>
+        <div class="text-end mt-1"><small class="text-muted" id="char-count">0 / 2200</small></div>
+
+        {% if post and post.update_id %}
+        <button type="button" class="btn btn-sm btn-outline-accent mt-2" onclick="regenerateCaption({{ post.id }})">
+          <i class="bi bi-stars"></i> Regenerate with Claude AI
+        </button>
+        {% endif %}
+      </div>
+
+      <!-- Hashtags -->
+      <div class="pw-card mb-3 p-3">
+        <label class="form-label fw-semibold">Hashtags</label>
+        <textarea name="hashtags" id="hashtags-ta" class="form-control bg-dark text-light border-secondary font-monospace"
+                  rows="3" placeholder="#PhysicsWallah #NEET2025 …"
+                  oninput="updatePreview()">{{ post.hashtags|join(' ') if post else '' }}</textarea>
+        <div class="mt-2 d-flex flex-wrap gap-1" id="hashtag-pills"></div>
+      </div>
+
+      <!-- Post type + template -->
+      <div class="pw-card mb-3 p-3">
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label fw-semibold">Post Type</label>
+            <select name="post_type" class="form-select bg-dark text-light border-secondary" onchange="updatePreviewFrame(this.value)">
+              {% for t in ['feed', 'story', 'carousel'] %}
+              <option value="{{ t }}" {% if post and post.post_type == t %}selected{% endif %}>{{ t|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold">Template</label>
+            <select name="template_name" class="form-select bg-dark text-light border-secondary">
+              {% for t in ['lecture_update','dpp_release','schedule_update','general_tip','announcement'] %}
+              <option value="{{ t }}" {% if post and post.template_name == t %}selected{% endif %}>{{ t|replace('_',' ')|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor notes -->
+      <div class="pw-card mb-3 p-3">
+        <label class="form-label fw-semibold">Editor Notes <small class="text-muted">(internal, not posted)</small></label>
+        <input type="text" name="editor_notes" class="form-control bg-dark text-light border-secondary"
+               value="{{ post.editor_notes or '' if post else '' }}" placeholder="Notes for yourself…">
+      </div>
+
+      <!-- Action buttons -->
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <button type="submit" class="btn btn-accent"><i class="bi bi-floppy"></i> Save Draft</button>
+
+        {% if post %}
+        {% if post.update_id %}
+        <button type="button" class="btn btn-outline-accent" onclick="regenerateImage({{ post.id }})">
+          <i class="bi bi-image"></i> Regen Image
+        </button>
+        {% endif %}
+
+        <button type="button" class="btn btn-outline-warning" data-bs-toggle="collapse" data-bs-target="#schedulePanel">
+          <i class="bi bi-clock"></i> Schedule
+        </button>
+        <button type="button" class="btn btn-outline-danger" onclick="postNow({{ post.id }})">
+          <i class="bi bi-instagram"></i> Post Now
+        </button>
+        <a href="{{ url_for('dashboard.posts') }}" class="btn btn-outline-secondary">Back</a>
+        {% endif %}
+      </div>
+
+      <!-- Schedule panel (collapsible) -->
+      {% if post %}
+      <div class="collapse pw-card p-3 mb-3" id="schedulePanel">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-calendar-plus me-2"></i>Schedule Post</h6>
+        <form method="POST" action="{{ url_for('dashboard.schedule_post', pid=post.id) }}">
+          <div class="row g-2 align-items-end">
+            <div class="col">
+              <label class="form-label small text-muted">Date & Time (leave blank for next optimal slot)</label>
+              <input type="datetime-local" name="scheduled_at" class="form-control bg-dark text-light border-secondary">
+            </div>
+            <div class="col-auto">
+              <button type="submit" class="btn btn-accent"><i class="bi bi-calendar-check"></i> Schedule</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+    </form>
+  </div>
+
+  <!-- Right: preview panel -->
+  <div class="col-lg-5">
+    <div class="pw-card p-3 sticky-top" style="top:80px">
+      <div class="fw-semibold mb-3"><i class="bi bi-phone me-2 text-accent"></i>Instagram Preview</div>
+
+      <!-- Phone mockup -->
+      <div class="d-flex justify-content-center mb-3">
+        <div class="phone-frame" id="phone-frame">
+          <div class="phone-screen">
+            <!-- IG header -->
+            <div class="d-flex align-items-center gap-2 px-2 py-1 border-bottom border-secondary">
+              <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#f59e0b);"></div>
+              <span style="font-size:11px;font-weight:600;color:#eee;">your_ig_handle</span>
+              <span style="font-size:11px;color:#888;margin-left:auto;">···</span>
+            </div>
+            <!-- Image preview -->
+            <div id="img-preview-wrap" style="width:100%;aspect-ratio:1/1;background:#1a1a2e;display:flex;align-items:center;justify-content:center;">
+              {% if post and post.image_path %}
+              <img src="/static/{{ post.image_path }}" style="width:100%;height:100%;object-fit:cover;" id="post-img-preview">
+              {% else %}
+              <i class="bi bi-image text-muted fs-2" id="post-img-preview"></i>
+              {% endif %}
+            </div>
+            <!-- Caption -->
+            <div class="phone-caption" id="preview-caption">{{ post.caption[:200] if post and post.caption else 'Your caption will appear here…' }}</div>
+            <div class="phone-hashtags" id="preview-hashtags">{{ post.hashtags|join(' ')[:120] if post and post.hashtags else '' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Character count badge -->
+      <div class="text-center mb-2">
+        <span class="badge bg-dark border border-secondary" id="full-char-count">0 / 2200 chars</span>
+      </div>
+
+      <!-- Post info -->
+      {% if post %}
+      <div class="border border-secondary rounded p-2 mt-2" style="font-size:12px">
+        <div class="row g-1">
+          <div class="col-6 text-muted">Status:</div>
+          <div class="col-6"><span class="status-{{ post.status }}">{{ post.status|title }}</span></div>
+          <div class="col-6 text-muted">AI Caption:</div>
+          <div class="col-6">{{ '✅' if post.ai_caption_used else '❌' }}</div>
+          {% if post.instagram_post_id %}
+          <div class="col-6 text-muted">IG Post ID:</div>
+          <div class="col-6 font-monospace" style="font-size:10px">{{ post.instagram_post_id }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Init
+const captionTA = document.getElementById('caption-ta');
+const hashtagsTA = document.getElementById('hashtags-ta');
+if (captionTA) {
+  updateCharCount(captionTA);
+  updatePreview();
+}
+
+function updatePreview() {
+  const cap = captionTA ? captionTA.value : '';
+  const tags = hashtagsTA ? hashtagsTA.value : '';
+  const previewCap = document.getElementById('preview-caption');
+  const previewHash = document.getElementById('preview-hashtags');
+  const fullCount = document.getElementById('full-char-count');
+  if (previewCap) previewCap.textContent = cap.slice(0, 200) || 'Your caption will appear here…';
+  if (previewHash) previewHash.textContent = tags.slice(0, 120);
+  const total = cap.length + (tags ? tags.length + 2 : 0);
+  if (fullCount) fullCount.textContent = `${total} / 2200 chars`;
+}
+
+function updateCharCount(el) {
+  const c = document.getElementById('char-count');
+  if (c) c.textContent = `${el.value.length} / 2200`;
+}
+
+function updatePreviewFrame(type) {
+  const wrap = document.getElementById('img-preview-wrap');
+  if (!wrap) return;
+  wrap.style.aspectRatio = type === 'story' ? '9/16' : '1/1';
+}
+
+function regenerateCaption(postId) {
+  showToast('Asking Claude AI for a new caption…', 'info');
+  fetch(`/posts/${postId}/regenerate-caption`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { showToast(d.error, 'danger'); return; }
+      if (captionTA) captionTA.value = d.caption;
+      if (hashtagsTA) hashtagsTA.value = d.hashtags.join(' ');
+      updatePreview();
+      showToast('Caption regenerated!', 'success');
+    })
+    .catch(e => showToast('Error: ' + e, 'danger'));
+}
+
+function regenerateImage(postId) {
+  showToast('Generating new image…', 'info');
+  const formData = new FormData();
+  const postTypeEl = document.querySelector('select[name="post_type"]');
+  formData.append('post_type', postTypeEl ? postTypeEl.value : 'feed');
+  fetch(`/posts/${postId}/regenerate-image`, { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { showToast(d.error, 'danger'); return; }
+      const img = document.getElementById('post-img-preview');
+      if (img && img.tagName === 'IMG') img.src = d.image_url + '?t=' + Date.now();
+      showToast('Image regenerated!', 'success');
+    })
+    .catch(e => showToast('Error: ' + e, 'danger'));
+}
+
+function postNow(postId) {
+  if (!confirm('Post this to Instagram right now?')) return;
+  fetch(`/posts/${postId}/post-now`, { method: 'POST' })
+    .then(() => location.reload());
+}
+</script>
+{% endblock %}

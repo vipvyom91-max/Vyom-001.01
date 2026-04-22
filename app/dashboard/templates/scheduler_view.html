@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Schedule · PW PCB Manager{% endblock %}
+{% block page_title %}Post Schedule{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- Upcoming queue -->
+  <div class="col-lg-8">
+    <div class="pw-card">
+      <div class="pw-card-header">
+        <span><i class="bi bi-calendar-week me-2 text-accent"></i>Upcoming Queue ({{ upcoming|length }} posts)</span>
+      </div>
+      {% if upcoming %}
+      <div class="list-group list-group-flush">
+        {% for sp in upcoming %}
+        <div class="list-group-item bg-transparent text-light d-flex align-items-center gap-3 border-secondary">
+          <!-- Thumbnail -->
+          {% if sp.post.image_path %}
+          <img src="/static/{{ sp.post.image_path }}" width="56" height="56" style="object-fit:cover;border-radius:8px;flex-shrink:0">
+          {% else %}
+          <div style="width:56px;height:56px;background:#1a1a2e;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-image text-muted"></i>
+          </div>
+          {% endif %}
+          <!-- Info -->
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="text-truncate fw-semibold">{{ sp.post.caption[:80] if sp.post.caption else '(no caption)' }}…</div>
+            <div class="d-flex gap-2 align-items-center mt-1">
+              <i class="bi bi-clock text-accent"></i>
+              <span class="text-warning fw-semibold">{{ sp.scheduled_at.strftime('%b %d, %Y') }}</span>
+              <span class="text-muted">{{ sp.scheduled_at.strftime('%H:%M UTC') }}</span>
+              {% if sp.attempt_count > 0 %}
+              <span class="badge bg-danger ms-1">{{ sp.attempt_count }} attempts</span>
+              {% endif %}
+            </div>
+            {% if sp.last_error %}
+            <div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle"></i> {{ sp.last_error[:60] }}</div>
+            {% endif %}
+          </div>
+          <!-- Actions -->
+          <div class="d-flex flex-column gap-1 flex-shrink-0">
+            <a href="{{ url_for('dashboard.edit_post', pid=sp.post_id) }}" class="btn btn-xs btn-outline-light">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="POST" action="{{ url_for('dashboard.cancel_scheduled', sid=sp.id) }}">
+              <button type="submit" class="btn btn-xs btn-outline-danger" onclick="return confirm('Cancel this scheduled post?')">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="bi bi-calendar-x fs-2 mb-2 d-block"></i>
+        No posts scheduled. Go to <a href="{{ url_for('dashboard.posts') }}" class="text-accent">Posts</a> and schedule some!
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right: recent + tips -->
+  <div class="col-lg-4">
+    <!-- Optimal posting times -->
+    <div class="pw-card mb-3 p-3">
+      <div class="fw-semibold mb-2"><i class="bi bi-clock-history me-2 text-accent"></i>Best Times (IST)</div>
+      <div class="d-flex flex-column gap-1">
+        {% for time_str, label in [('7:00 AM','Morning commute'),('12:00 PM','Lunch break'),('5:00 PM','After school'),('8:00 PM','Prime time'),('10:00 PM','Night study')] %}
+        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary">
+          <span class="fw-semibold text-warning">{{ time_str }}</span>
+          <small class="text-muted">{{ label }}</small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Recent completed posts -->
+    <div class="pw-card">
+      <div class="pw-card-header"><span><i class="bi bi-check2-circle me-2 text-success"></i>Recently Posted</span></div>
+      {% if recent_done %}
+      <div class="list-group list-group-flush">
+        {% for sp in recent_done %}
+        <div class="list-group-item bg-transparent text-light border-secondary py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-truncate small" style="max-width:160px">
+              {{ sp.post.caption[:50] if sp.post.caption else '—' }}
+            </span>
+            <span class="badge {% if sp.status == 'done' %}bg-success{% else %}bg-danger{% endif %}">{{ sp.status }}</span>
+          </div>
+          {% if sp.posted_at %}
+          <small class="text-muted">{{ sp.posted_at.strftime('%b %d %H:%M') }}</small>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-3 small">No posts published yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

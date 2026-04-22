@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · PW PCB Manager{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="--accent:#7c3aed">
+      <div class="stat-icon"><i class="bi bi-collection"></i></div>
+      <div class="stat-value">{{ today_updates }}</div>
+      <div class="stat-label">Updates Today</div>
+      <div class="stat-sub">{{ total_updates }} total</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="--accent:#f59e0b">
+      <div class="stat-icon"><i class="bi bi-file-earmark-image"></i></div>
+      <div class="stat-value">{{ total_posts }}</div>
+      <div class="stat-label">Posts Created</div>
+      <div class="stat-sub">all time</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="--accent:#10b981">
+      <div class="stat-icon"><i class="bi bi-calendar-check"></i></div>
+      <div class="stat-value">{{ scheduled_count }}</div>
+      <div class="stat-label">Scheduled</div>
+      <div class="stat-sub">in queue</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="--accent:#ef4444">
+      <div class="stat-icon"><i class="bi bi-instagram"></i></div>
+      <div class="stat-value">{{ published_count }}</div>
+      <div class="stat-label">Published</div>
+      <div class="stat-sub">to Instagram</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Left column: updates + upcoming -->
+  <div class="col-lg-8">
+
+    <!-- Recent Updates -->
+    <div class="pw-card mb-3">
+      <div class="pw-card-header">
+        <span><i class="bi bi-rss me-2 text-accent"></i>Recent Updates</span>
+        <a href="{{ url_for('dashboard.updates') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle">
+          <thead>
+            <tr>
+              <th style="width:40px">Src</th>
+              <th>Title</th>
+              <th style="width:90px">Type</th>
+              <th style="width:80px">Cat</th>
+              <th style="width:80px">Score</th>
+              <th style="width:100px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in recent_updates %}
+            <tr>
+              <td><span class="source-dot source-{{ u.source.source_type }}">{{ u.source.source_type[0]|upper }}</span></td>
+              <td class="text-truncate" style="max-width:240px">
+                {% if u.url %}<a href="{{ u.url }}" target="_blank" class="text-light text-decoration-none">{{ u.title }}</a>
+                {% else %}{{ u.title }}{% endif %}
+              </td>
+              <td><span class="badge badge-type badge-{{ u.content_type }}">{{ u.content_type }}</span></td>
+              <td><small class="text-muted">{{ u.category or '—' }}</small></td>
+              <td>
+                <div class="score-bar">
+                  <div class="score-fill" style="width:{{ (u.relevance_score * 100)|int }}%"></div>
+                </div>
+                <small>{{ "%.0f"|format(u.relevance_score * 100) }}%</small>
+              </td>
+              <td>
+                {% if not u.is_queued %}
+                <form method="POST" action="{{ url_for('dashboard.promote_update', uid=u.id) }}">
+                  <button class="btn btn-xs btn-accent" type="submit" title="Promote to Post">
+                    <i class="bi bi-magic"></i> Promote
+                  </button>
+                </form>
+                {% else %}
+                <span class="badge bg-success"><i class="bi bi-check2"></i> Queued</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-4">No updates yet. Click <strong>Collect Now</strong> to start!</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Upcoming scheduled posts -->
+    <div class="pw-card">
+      <div class="pw-card-header">
+        <span><i class="bi bi-calendar-week me-2 text-accent"></i>Upcoming Posts</span>
+        <a href="{{ url_for('dashboard.scheduler_view') }}" class="btn btn-sm btn-outline-secondary">Full Schedule</a>
+      </div>
+      {% if upcoming_posts %}
+      <div class="list-group list-group-flush bg-transparent">
+        {% for sp in upcoming_posts %}
+        <div class="list-group-item bg-transparent text-light d-flex align-items-center gap-3">
+          {% if sp.post.image_path %}
+          <img src="/static/{{ sp.post.image_path }}" width="50" height="50" style="object-fit:cover;border-radius:6px">
+          {% else %}
+          <div style="width:50px;height:50px;background:#2a2a3e;border-radius:6px;display:flex;align-items:center;justify-content:center">
+            <i class="bi bi-image text-muted"></i>
+          </div>
+          {% endif %}
+          <div class="flex-grow-1 text-truncate">
+            <div class="text-truncate" style="max-width:300px">{{ sp.post.caption[:80] if sp.post.caption else '(no caption)' }}…</div>
+            <small class="text-muted">{{ sp.scheduled_at.strftime('%b %d, %Y %H:%M UTC') }}</small>
+          </div>
+          <span class="badge bg-warning text-dark">{{ sp.status }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-4">No posts scheduled yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right column: chart + logs -->
+  <div class="col-lg-4">
+
+    <!-- Chart -->
+    <div class="pw-card mb-3">
+      <div class="pw-card-header">
+        <span><i class="bi bi-bar-chart me-2 text-accent"></i>Posts Published (7 days)</span>
+      </div>
+      <div class="p-3">
+        <canvas id="postsChart" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- Collection logs -->
+    <div class="pw-card">
+      <div class="pw-card-header">
+        <span><i class="bi bi-terminal me-2 text-accent"></i>Collection Log</span>
+      </div>
+      <div class="p-0">
+        {% for log in recent_logs %}
+        <div class="log-row d-flex align-items-center gap-2 px-3 py-2 border-bottom border-dark">
+          <span class="status-dot {% if log.status == 'success' %}dot-green{% else %}dot-red{% endif %}"></span>
+          <div class="flex-grow-1" style="font-size:12px">
+            <div class="fw-semibold">{{ log.source_name }}</div>
+            <div class="text-muted">{{ log.items_collected }} items · {{ log.ran_at.strftime('%H:%M') }}</div>
+          </div>
+          {% if log.status == 'error' %}
+          <i class="bi bi-exclamation-triangle text-danger" title="{{ log.error_message }}"></i>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-3" style="font-size:13px">No collection logs yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chartLabels = {{ chart_labels|safe }};
+const chartData = {{ chart_data|safe }};
+const ctx = document.getElementById('postsChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: chartLabels,
+    datasets: [{
+      label: 'Posts Published',
+      data: chartData,
+      backgroundColor: 'rgba(124,58,237,0.7)',
+      borderColor: '#7c3aed',
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#aaa' }, grid: { color: '#2a2a3e' } },
+      y: { ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#2a2a3e' }, beginAtZero: true },
+    }
+  }
+});
+</script>
+{% endblock %}

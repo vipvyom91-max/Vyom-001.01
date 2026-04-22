@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Settings · PW PCB Manager{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<!-- API Status -->
+<div class="pw-card mb-3 p-3">
+  <h6 class="fw-semibold mb-3"><i class="bi bi-plug me-2 text-accent"></i>API Connection Status</h6>
+  <div class="row g-2">
+    {% set api_icons = {'youtube':'youtube','telegram':'telegram','twitter':'twitter-x','anthropic':'stars','instagram':'instagram'} %}
+    {% set api_labels = {'youtube':'YouTube Data API','telegram':'Telegram API','twitter':'Twitter / X API','anthropic':'Claude (Anthropic)','instagram':'Instagram'} %}
+    {% for key, label in api_labels.items() %}
+    <div class="col-6 col-md-4 col-lg-3">
+      <div class="api-status-card {% if api_status.get(key) %}api-ok{% else %}api-missing{% endif %}">
+        <i class="bi bi-{{ api_icons[key] }} fs-4 mb-1"></i>
+        <div class="fw-semibold small">{{ label }}</div>
+        <div class="small mt-1">
+          {% if api_status.get(key) %}
+          <span class="text-success"><i class="bi bi-check-circle-fill"></i> Configured</span>
+          {% else %}
+          <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Not set</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="mt-2">
+    <small class="text-muted">To update API keys, edit your <code>.env</code> file and restart the app.</small>
+  </div>
+</div>
+
+<!-- Sources management -->
+<div class="pw-card mb-3">
+  <div class="pw-card-header">
+    <span><i class="bi bi-diagram-3 me-2 text-accent"></i>Monitored Sources</span>
+    <button class="btn btn-sm btn-accent" data-bs-toggle="collapse" data-bs-target="#addSourceForm">
+      <i class="bi bi-plus-lg"></i> Add Source
+    </button>
+  </div>
+
+  <!-- Add Source form -->
+  <div class="collapse" id="addSourceForm">
+    <div class="border-bottom border-secondary p-3">
+      <form method="POST" class="row g-2 align-items-end">
+        <input type="hidden" name="action" value="add_source">
+        <div class="col-12 col-md-3">
+          <label class="form-label small text-muted">Name</label>
+          <input type="text" name="name" class="form-control form-control-sm bg-dark text-light border-secondary"
+                 placeholder="PW Biology YouTube" required>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted">Type</label>
+          <select name="source_type" class="form-select form-select-sm bg-dark text-light border-secondary">
+            <option value="youtube">YouTube</option>
+            <option value="telegram">Telegram</option>
+            <option value="twitter">Twitter/X</option>
+            <option value="website">Website</option>
+            <option value="rss">RSS Feed</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-5">
+          <label class="form-label small text-muted">Identifier (channel ID / handle / URL)</label>
+          <input type="text" name="identifier" class="form-control form-control-sm bg-dark text-light border-secondary"
+                 placeholder="UCxxxxxxx or @channel or https://…" required>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-sm btn-accent">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sources table -->
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th style="width:90px">Type</th>
+          <th>Identifier</th>
+          <th style="width:120px">Last Checked</th>
+          <th style="width:80px">Status</th>
+          <th style="width:100px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for src in sources %}
+        <tr>
+          <td class="fw-semibold">{{ src.name }}</td>
+          <td><span class="source-dot source-{{ src.source_type }}">{{ src.source_type[0]|upper }}</span> {{ src.source_type }}</td>
+          <td class="font-monospace small text-truncate" style="max-width:200px">{{ src.identifier }}</td>
+          <td><small class="text-muted">{{ src.last_checked_at.strftime('%b %d %H:%M') if src.last_checked_at else 'Never' }}</small></td>
+          <td>
+            <form method="POST">
+              <input type="hidden" name="action" value="toggle_source">
+              <input type="hidden" name="source_id" value="{{ src.id }}">
+              <button type="submit" class="btn btn-xs {% if src.is_active %}btn-success{% else %}btn-secondary{% endif %}">
+                {{ 'Active' if src.is_active else 'Paused' }}
+              </button>
+            </form>
+          </td>
+          <td>
+            <form method="POST" onsubmit="return confirm('Delete source {{ src.name }}?')">
+              <input type="hidden" name="action" value="delete_source">
+              <input type="hidden" name="source_id" value="{{ src.id }}">
+              <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            No sources configured. Run <code>python scripts/seed_db.py</code> to add default PW sources.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- App info -->
+<div class="pw-card p-3">
+  <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2 text-accent"></i>Quick Setup Guide</h6>
+  <ol class="text-muted small mb-0">
+    <li class="mb-1">Copy <code>.env.example</code> → <code>.env</code> and fill in your API keys.</li>
+    <li class="mb-1">Run <code>python scripts/seed_db.py</code> to add default PW sources.</li>
+    <li class="mb-1">Run <code>python scripts/setup_telegram.py</code> once to authenticate Telegram.</li>
+    <li class="mb-1">Click <strong>Collect Now</strong> in the sidebar to pull first batch of updates.</li>
+    <li class="mb-1">Go to <strong>Updates</strong>, promote interesting items to posts.</li>
+    <li class="mb-1">Review captions in the editor, then schedule or post immediately.</li>
+    <li>For Instagram posting, set <code>INSTAGRAM_BUSINESS_ACCOUNT_ID</code> + <code>INSTAGRAM_ACCESS_TOKEN</code> (Graph API).</li>
+  </ol>
+</div>
+{% endblock %}

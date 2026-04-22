@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Updates · PW PCB Manager{% endblock %}
+{% block page_title %}All Updates{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="pw-card mb-3">
+  <form method="GET" class="row g-2 p-3 align-items-end">
+    <div class="col-6 col-md-3">
+      <label class="form-label text-muted small">Source</label>
+      <select name="source" class="form-select form-select-sm bg-dark text-light border-secondary">
+        <option value="">All sources</option>
+        {% for s in sources %}
+        <option value="{{ s.source_type }}" {% if source_filter == s.source_type %}selected{% endif %}>{{ s.source_type|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label text-muted small">Category</label>
+      <select name="category" class="form-select form-select-sm bg-dark text-light border-secondary">
+        <option value="">All</option>
+        {% for cat in ['Physics','Chemistry','Biology','General'] %}
+        <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label text-muted small">Type</label>
+      <select name="type" class="form-select form-select-sm bg-dark text-light border-secondary">
+        <option value="">All</option>
+        {% for t in ['lecture','dpp','schedule','tip','announcement','general'] %}
+        <option value="{{ t }}" {% if type_filter == t %}selected{% endif %}>{{ t|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <div class="form-check mt-4">
+        <input class="form-check-input" type="checkbox" name="starred" value="1" id="starredCheck" {% if starred_only %}checked{% endif %}>
+        <label class="form-check-label text-muted small" for="starredCheck">Starred only</label>
+      </div>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-sm btn-accent"><i class="bi bi-funnel"></i> Filter</button>
+      <a href="{{ url_for('dashboard.updates') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+    </div>
+  </form>
+</div>
+
+<!-- Updates table -->
+<div class="pw-card">
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th style="width:36px"></th>
+          <th style="width:36px">Src</th>
+          <th>Title / Preview</th>
+          <th style="width:90px">Type</th>
+          <th style="width:80px">Category</th>
+          <th style="width:70px">Score</th>
+          <th style="width:100px">Collected</th>
+          <th style="width:120px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in pagination.items %}
+        <tr class="{% if u.is_starred %}table-warning-subtle{% endif %}">
+          <td>
+            <button class="btn btn-icon star-btn {% if u.is_starred %}text-warning{% else %}text-muted{% endif %}"
+                    data-uid="{{ u.id }}" onclick="toggleStar(this)" title="Star">
+              <i class="bi bi-star{% if u.is_starred %}-fill{% endif %}"></i>
+            </button>
+          </td>
+          <td><span class="source-dot source-{{ u.source.source_type }}">{{ u.source.source_type[0]|upper }}</span></td>
+          <td>
+            {% if u.media_url and not u.media_url.startswith('[') %}
+            <img src="{{ u.media_url }}" width="40" height="40" style="object-fit:cover;border-radius:4px;float:left;margin-right:8px">
+            {% endif %}
+            <div>
+              <div class="fw-semibold text-truncate" style="max-width:280px">
+                {% if u.url %}<a href="{{ u.url }}" target="_blank" class="text-light text-decoration-none">{{ u.title }}</a>
+                {% else %}{{ u.title }}{% endif %}
+              </div>
+              <div class="text-muted small text-truncate" style="max-width:280px">{{ (u.body or '')[:100] }}</div>
+            </div>
+          </td>
+          <td><span class="badge badge-type badge-{{ u.content_type }}">{{ u.content_type }}</span></td>
+          <td><small class="text-muted">{{ u.category or '—' }}</small></td>
+          <td>
+            <small>{{ "%.0f"|format(u.relevance_score * 100) }}%</small>
+            <div class="score-bar mt-1"><div class="score-fill" style="width:{{ (u.relevance_score * 100)|int }}%"></div></div>
+          </td>
+          <td><small class="text-muted">{{ u.collected_at.strftime('%b %d %H:%M') }}</small></td>
+          <td>
+            {% if not u.is_queued %}
+            <form method="POST" action="{{ url_for('dashboard.promote_update', uid=u.id) }}" class="d-inline">
+              <button type="submit" class="btn btn-xs btn-accent" title="Auto-process into a draft post">
+                <i class="bi bi-magic"></i> Promote
+              </button>
+            </form>
+            {% else %}
+            <span class="badge bg-success"><i class="bi bi-check2"></i> Done</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center text-muted py-5">No updates found. Adjust filters or collect new data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if pagination.has_prev %}
+        <li class="page-item"><a class="page-link bg-dark border-secondary text-light" href="{{ url_for('dashboard.updates', page=pagination.prev_num, source=source_filter, category=category_filter, type=type_filter) }}">‹</a></li>
+        {% endif %}
+        {% for p in pagination.iter_pages() %}
+          {% if p %}
+          <li class="page-item {% if p == pagination.page %}active{% endif %}">
+            <a class="page-link bg-dark border-secondary text-light" href="{{ url_for('dashboard.updates', page=p, source=source_filter, category=category_filter, type=type_filter) }}">{{ p }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link bg-dark">…</span></li>
+          {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <li class="page-item"><a class="page-link bg-dark border-secondary text-light" href="{{ url_for('dashboard.updates', page=pagination.next_num, source=source_filter, category=category_filter, type=type_filter) }}">›</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleStar(btn) {
+  const uid = btn.dataset.uid;
+  fetch(`/updates/${uid}/star`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      const icon = btn.querySelector('i');
+      if (d.starred) {
+        icon.classList.replace('bi-star', 'bi-star-fill');
+        btn.classList.replace('text-muted', 'text-warning');
+      } else {
+        icon.classList.replace('bi-star-fill', 'bi-star');
+        btn.classList.replace('text-warning', 'text-muted');
+      }
+    });
+}
+</script>
+{% endblock %}
