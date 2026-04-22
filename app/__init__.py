@@ -33,14 +33,13 @@ def _seed_default_sources():
     if Source.query.count() > 0:
         return
     defaults = [
-        ("PW Alakh Pandey (YouTube)", "youtube",  "UCk0Kvsaln4I4v9AKBb3FXOQ"),
-        ("PW Official (YouTube)",     "youtube",  "UCb1RuCdQk8i-A4RYkvBJpZA"),
-        ("PW Biology (YouTube)",      "youtube",  "UCWPm8bRzqZbZYhBEGS0anEA"),
-        ("PW YouTube (RSS fallback)", "rss",      "https://www.youtube.com/feeds/videos.xml?channel_id=UCk0Kvsaln4I4v9AKBb3FXOQ"),
-        ("PW Official (Twitter/X)",   "twitter",  "PhysicsWallah"),
-        ("Alakh Pandey (Twitter/X)",  "twitter",  "AlakhPandey01"),
-        ("PW Website",                "website",  "https://pw.live"),
-        ("PW Courses",                "website",  "https://pw.live/courses"),
+        ("PW Alakh Pandey (YouTube)", "youtube",  "UCiGyWN6DEbnj2alu7iapuKQ"),
+        ("PW NEET (YouTube)",        "youtube",  "UCGw8iWmsw1cPlfcrww-3C0g"),
+        ("NCERT Wallah (YouTube)",   "youtube",  "UC8zCnnfhz-dvIpVdZ1CheuA"),
+        ("PW YouTube (RSS fallback)","rss",      "https://www.youtube.com/feeds/videos.xml?channel_id=UCiGyWN6DEbnj2alu7iapuKQ"),
+        ("PW Official (Twitter/X)",  "twitter",  "PhysicsWallah"),
+        ("Alakh Pandey (Twitter/X)", "twitter",  "AlakhPandey01"),
+        ("PW Website",               "website",  "https://pw.live"),
     ]
     for name, stype, ident in defaults:
         src = Source(name=name, source_type=stype, identifier=ident)

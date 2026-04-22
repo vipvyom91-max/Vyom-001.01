@@ -11,13 +11,9 @@ class Config:
     # YouTube
     YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
     PW_YOUTUBE_CHANNEL_IDS = [
-        "UCk0Kvsaln4I4v9AKBb3FXOQ",  # Physics Wallah – Alakh Pandey
-        "UCb1RuCdQk8i-A4RYkvBJpZA",  # PW Official channel
-        "UCWPm8bRzqZbZYhBEGS0anEA",  # PW Biology
-    ]
-    PW_YOUTUBE_PLAYLIST_IDS = [
-        "PLQJDMIkEOQ7E83gPBt1AwMuUGEqX_mNIK",  # Class 12 Physics
-        "PLQJDMIkEOQ7GfJaAh4ib7hDPXQKXvX7Dq",  # Class 12 Chemistry
+        "UCiGyWN6DEbnj2alu7iapuKQ",  # Physics Wallah - Alakh Pandey (main)
+        "UCGw8iWmsw1cPlfcrww-3C0g",  # PW NEET (dedicated NEET/PCB)
+        "UC8zCnnfhz-dvIpVdZ1CheuA",  # NCERT Wallah
     ]
 
     # Telegram
