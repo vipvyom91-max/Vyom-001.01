@@ -52,11 +52,6 @@
                   oninput="updatePreview(); updateCharCount(this)">{{ post.caption if post else '' }}</textarea>
         <div class="text-end mt-1"><small class="text-muted" id="char-count">0 / 2200</small></div>
 
-        {% if post and post.update_id %}
-        <button type="button" class="btn btn-sm btn-outline-accent mt-2" onclick="regenerateCaption({{ post.id }})">
-          <i class="bi bi-stars"></i> Regenerate with Claude AI
-        </button>
-        {% endif %}
       </div>
 
       <!-- Hashtags -->
@@ -108,12 +103,6 @@
         </button>
         {% endif %}
 
-        <button type="button" class="btn btn-outline-warning" data-bs-toggle="collapse" data-bs-target="#schedulePanel">
-          <i class="bi bi-clock"></i> Schedule
-        </button>
-        <button type="button" class="btn btn-outline-danger" onclick="postNow({{ post.id }})">
-          <i class="bi bi-instagram"></i> Post Now
-        </button>
         <a href="{{ url_for('dashboard.posts') }}" class="btn btn-outline-secondary">Back</a>
         {% endif %}
       </div>

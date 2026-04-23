@@ -1,9 +1,7 @@
 """
 APScheduler configuration.
 Started inside the Flask application factory (app/__init__.py).
-Two jobs:
-  1. Data collection — every COLLECTION_INTERVAL_HOURS hours
-  2. Scheduled post executor — every 5 minutes
+One job: Data collection — every COLLECTION_INTERVAL_HOURS hours.
 """
 import logging
 from datetime import datetime
@@ -37,18 +35,9 @@ def start_scheduler(app):
         args=[app],
     )
 
-    scheduler.add_job(
-        func=_run_scheduled_posts,
-        trigger=IntervalTrigger(minutes=5),
-        id="post_publisher",
-        name="Publish Scheduled Posts",
-        replace_existing=True,
-        args=[app],
-    )
-
     if not scheduler.running:
         scheduler.start()
-        logger.info(f"APScheduler started — collection every {interval_h}h, publisher every 5m")
+        logger.info(f"APScheduler started — collection every {interval_h}h")
 
 
 def _run_collection(app):
@@ -111,10 +100,3 @@ def _run_collection(app):
             logger.error(f"Stats update failed: {e}")
 
 
-def _run_scheduled_posts(app):
-    """Publish any ScheduledPosts that are due."""
-    with app.app_context():
-        from app.instagram.post_scheduler import PostScheduler
-        from config import Config
-        sched = PostScheduler(Config)
-        sched.run_due_posts(app)
