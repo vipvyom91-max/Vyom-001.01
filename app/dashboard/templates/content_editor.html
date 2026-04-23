@@ -316,9 +316,15 @@ function regenerateImage(postId) {
 }
 
 function postNow(postId) {
-  if (!confirm('Post this to Instagram right now?')) return;
+  if (!confirm('Post this image to Instagram right now?')) return;
+  const btn = document.querySelector('[onclick="postNow(' + postId + ')"]');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Posting…'; }
   fetch(`/posts/${postId}/post-now`, { method: 'POST' })
-    .then(() => location.reload());
+    .then(r => { location.reload(); })
+    .catch(e => {
+      showToast('Network error: ' + e, 'danger');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-instagram"></i> Post Now'; }
+    });
 }
 </script>
 {% endblock %}

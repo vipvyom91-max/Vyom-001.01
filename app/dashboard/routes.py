@@ -627,6 +627,15 @@ def api_stats():
     return jsonify(stats)
 
 
+@dashboard_bp.route("/api/test-instagram", methods=["POST"])
+def api_test_instagram():
+    """Verify Instagram credentials without actually posting."""
+    from app.instagram.poster import InstagramPoster
+    poster = InstagramPoster(AppConfig)
+    result = poster.verify_connection()
+    return jsonify(result)
+
+
 @dashboard_bp.route("/api/updates/feed")
 def api_updates_feed():
     updates = Update.query.order_by(Update.collected_at.desc()).limit(10).all()

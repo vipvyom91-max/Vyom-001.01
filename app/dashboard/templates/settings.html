@@ -25,8 +25,14 @@
     </div>
     {% endfor %}
   </div>
-  <div class="mt-2">
-    <small class="text-muted">To update API keys, edit your <code>.env</code> file and restart the app.</small>
+  <div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+    <small class="text-muted">Edit <code>.env</code> and restart to update keys.</small>
+    {% if api_status.get('instagram') %}
+    <button class="btn btn-sm btn-outline-secondary" onclick="testInstagram()">
+      <i class="bi bi-instagram"></i> Test IG Connection
+    </button>
+    <span id="ig-test-result" class="small"></span>
+    {% endif %}
   </div>
 </div>
 
@@ -183,6 +189,27 @@ function resetSources() {
         checkSources();
       }
     });
+}
+
+function testInstagram() {
+  const btn = event.currentTarget;
+  const result = document.getElementById('ig-test-result');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  if (result) result.textContent = '';
+  fetch('/api/test-instagram', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        const info = d.username ? ` @${d.username}` : '';
+        const followers = d.followers ? ` · ${d.followers.toLocaleString()} followers` : '';
+        if (result) result.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Connected${info}${followers} (${d.method || 'ok'})</span>`;
+      } else {
+        if (result) result.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill"></i> ${d.error || 'Failed'}</span>`;
+      }
+    })
+    .catch(e => { if (result) result.innerHTML = `<span class="text-danger">Error: ${e}</span>`; })
+    .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-instagram"></i> Test IG Connection'; });
 }
 
 function checkSources() {
