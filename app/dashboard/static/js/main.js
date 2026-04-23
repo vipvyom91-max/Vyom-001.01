@@ -101,10 +101,31 @@ function renderHashtagPills() {
   ).join('');
 }
 
+// ── Scheduler countdown ───────────────────────────────────────────────────
+function updateSchedulerCountdown() {
+  fetch('/api/scheduler-status')
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('next-collect-info');
+      if (!el) return;
+      if (d.next_run && d.in_minutes !== null) {
+        const m = d.in_minutes;
+        const txt = m <= 0 ? 'Collecting soon…' : m < 60 ? `Auto-collect in ${m}m` : `Auto-collect in ${Math.floor(m/60)}h ${m%60}m`;
+        el.textContent = txt;
+        el.style.color = m < 10 ? '#10b981' : '#888';
+      } else {
+        el.textContent = d.running ? 'Scheduler running' : 'Scheduler off';
+      }
+    })
+    .catch(() => {});
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   updateLastCollectedBadge();
+  updateSchedulerCountdown();
   startAutoRefresh();
+  setInterval(updateSchedulerCountdown, 60000);
 
   // Hashtag pill watcher
   const hashTA = document.getElementById('hashtags-ta');

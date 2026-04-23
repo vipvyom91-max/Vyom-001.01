@@ -455,6 +455,50 @@ def _check_api_status() -> dict:
 
 # ── API endpoints ─────────────────────────────────────────────────────────
 
+@dashboard_bp.route("/api/download-posts-zip")
+def download_posts_zip():
+    """Download all draft post images as a single zip file."""
+    import io, zipfile, os
+    from flask import send_file
+    posts = Post.query.filter_by(status="draft").order_by(Post.created_at.desc()).limit(30).all()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for post in posts:
+            if not post.image_path:
+                continue
+            full = os.path.join(current_app.static_folder, post.image_path)
+            if os.path.exists(full):
+                caption_text = post.full_caption or ""
+                zf.write(full, f"post_{post.id}.jpg")
+                zf.writestr(f"post_{post.id}_caption.txt", caption_text)
+    buf.seek(0)
+    return send_file(buf, mimetype="application/zip",
+                     as_attachment=True, download_name="pw_posts.zip")
+
+
+@dashboard_bp.route("/api/scheduler-status")
+def api_scheduler_status():
+    """Return when the next auto-collect will run."""
+    try:
+        from scheduler_runner import get_scheduler
+        sched = get_scheduler()
+        job = sched.get_job("data_collection")
+        if job and job.next_run_time:
+            nrt = job.next_run_time
+            # Convert to naive UTC for timedelta
+            from datetime import timezone as tz
+            now = datetime.now(tz.utc)
+            diff = (nrt - now).total_seconds()
+            mins = int(diff // 60)
+            return jsonify({
+                "next_run": nrt.strftime("%H:%M UTC"),
+                "in_minutes": max(mins, 0),
+                "running": sched.running,
+            })
+    except Exception:
+        pass
+    return jsonify({"next_run": None, "in_minutes": None, "running": False})
+
 @dashboard_bp.route("/api/collect-now", methods=["POST"])
 def api_collect_now():
     try:
