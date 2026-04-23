@@ -164,7 +164,7 @@
             </div>
             <!-- Caption -->
             <div class="phone-caption" id="preview-caption">{{ post.caption[:200] if post and post.caption else 'Your caption will appear here…' }}</div>
-            <div class="phone-hashtags" id="preview-hashtags">{{ post.hashtags|join(' ')[:120] if post and post.hashtags else '' }}</div>
+            <div class="phone-hashtags" id="preview-hashtags">{{ (post.hashtags|join(' '))[0:120] if post and post.hashtags else '' }}</div>
           </div>
         </div>
       </div>
