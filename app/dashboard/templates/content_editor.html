@@ -46,12 +46,26 @@
 
       <!-- Caption -->
       <div class="pw-card mb-3 p-3">
-        <label class="form-label fw-semibold">Caption <small class="text-muted">(max 2200 chars)</small></label>
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <label class="form-label fw-semibold mb-0">Caption <small class="text-muted">(max 2200 chars)</small></label>
+          {% if post and post.update_id %}
+          <div class="d-flex gap-2 align-items-center">
+            <select id="caption-style-sel" class="form-select form-select-sm bg-dark text-light border-secondary" style="width:auto">
+              <option value="random">🎲 Random Style</option>
+              <option value="hype">🔥 Hype</option>
+              <option value="educational">📚 Educational</option>
+              <option value="funny">😂 Funny</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-warning" onclick="regenerateCaption({{ post.id }})">
+              <i class="bi bi-magic"></i> Regen
+            </button>
+          </div>
+          {% endif %}
+        </div>
         <textarea name="caption" id="caption-ta" class="form-control bg-dark text-light border-secondary"
                   rows="8" maxlength="2200"
                   oninput="updatePreview(); updateCharCount(this)">{{ post.caption if post else '' }}</textarea>
         <div class="text-end mt-1"><small class="text-muted" id="char-count">0 / 2200</small></div>
-
       </div>
 
       <!-- Hashtags -->
@@ -108,9 +122,6 @@
         {% endif %}
 
         {% if post.update_id %}
-        <button type="button" class="btn btn-outline-warning" onclick="regenerateCaption({{ post.id }})">
-          <i class="bi bi-magic"></i> Regen Caption
-        </button>
         <button type="button" class="btn btn-outline-secondary" onclick="regenerateImage({{ post.id }})">
           <i class="bi bi-image"></i> Regen Image
         </button>
@@ -286,15 +297,20 @@ function copyCaption() {
 }
 
 function regenerateCaption(postId) {
-  showToast('Asking Claude AI for a new caption…', 'info');
-  fetch(`/posts/${postId}/regenerate-caption`, { method: 'POST' })
+  const styleEl = document.getElementById('caption-style-sel');
+  const style = styleEl ? styleEl.value : 'random';
+  showToast('Generating ' + style + ' caption…', 'info');
+  const formData = new FormData();
+  formData.append('style', style);
+  fetch(`/posts/${postId}/regenerate-caption`, { method: 'POST', body: formData })
     .then(r => r.json())
     .then(d => {
       if (d.error) { showToast(d.error, 'danger'); return; }
       if (captionTA) captionTA.value = d.caption;
-      if (hashtagsTA) hashtagsTA.value = d.hashtags.join(' ');
+      if (hashtagsTA) hashtagsTA.value = (d.hashtags || []).join(' ');
       updatePreview();
-      showToast('Caption regenerated!', 'success');
+      renderHashtagPills();
+      showToast('Caption regenerated (' + (d.style || style) + ')!', 'success');
     })
     .catch(e => showToast('Error: ' + e, 'danger'));
 }

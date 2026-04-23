@@ -104,6 +104,7 @@ _FUNNY = {
 }
 
 _STYLES = [_HYPE, _EDUCATIONAL, _FUNNY]
+_STYLE_MAP = {"hype": _HYPE, "educational": _EDUCATIONAL, "funny": _FUNNY}
 
 
 class CaptionAI:
@@ -119,12 +120,18 @@ class CaptionAI:
             self._client = anthropic.Anthropic(api_key=self.config.ANTHROPIC_API_KEY)
         return self._client
 
-    def generate_caption(self, update, post_type: str = "feed") -> dict:
+    def generate_caption(self, update, post_type: str = "feed",
+                         style: str = "random") -> dict:
+        """
+        style: "random" | "hype" | "educational" | "funny"
+        If Anthropic API key is set, uses Claude AI (style param is ignored for AI).
+        Otherwise uses template fallback with the requested style.
+        """
         try:
             client = self._get_client()
         except ValueError as e:
             logger.debug(str(e))
-            return self._fallback(update)
+            return self._fallback(update, style)
 
         prompt = CAPTION_PROMPT_TEMPLATE.format(
             post_type=post_type,
@@ -142,10 +149,12 @@ class CaptionAI:
                 messages=[{"role": "user", "content": prompt}],
             )
             raw = message.content[0].text.strip()
-            return self._parse(raw, update)
+            result = self._parse(raw, update)
+            result["style"] = "ai"
+            return result
         except Exception as e:
             logger.error(f"Claude API error: {e}")
-            return self._fallback(update)
+            return self._fallback(update, style)
 
     def _parse(self, raw: str, update) -> dict:
         raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("`").strip()
@@ -156,18 +165,25 @@ class CaptionAI:
                 "hashtags":   data.get("hashtags", [])[:20],
                 "story_text": data.get("story_text", update.title or "")[:50],
                 "category":   data.get("category", update.category or "General"),
+                "style":      "ai",
             }
         except json.JSONDecodeError:
-            return self._fallback(update)
+            return self._fallback(update, "random")
 
-    def _fallback(self, update) -> dict:
+    def _fallback(self, update, style: str = "random") -> dict:
         from config import Config
         title    = (update.title or "PW Update")[:120]
         ctype    = update.content_type or "general"
         category = update.category or "General"
 
-        style     = random.choice(_STYLES)
-        templates = style.get(ctype) or style.get("lecture", ["🚀 {title}\n\nFollow for daily PW updates! 📲"])
+        if style == "random" or style not in _STYLE_MAP:
+            chosen_style = random.choice(_STYLES)
+            style_name = random.choice(["hype", "educational", "funny"])
+        else:
+            chosen_style = _STYLE_MAP[style]
+            style_name = style
+
+        templates = chosen_style.get(ctype) or chosen_style.get("lecture", ["🚀 {title}\n\nFollow for daily PW updates! 📲"])
         caption   = random.choice(templates).format(title=title)
 
         hashtags = list(dict.fromkeys(
@@ -182,4 +198,5 @@ class CaptionAI:
             "hashtags":   hashtags[:20],
             "story_text": title[:50],
             "category":   category,
+            "style":      style_name,
         }

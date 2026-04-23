@@ -280,15 +280,17 @@ def regenerate_caption(pid):
     post = Post.query.get_or_404(pid)
     if not post.update_id:
         return jsonify({"error": "No source update linked"}), 400
+    style = request.form.get("style", "random")
     from app.processors.caption_ai import CaptionAI
     ai = CaptionAI(AppConfig)
-    result = ai.generate_caption(post.update, post.post_type)
+    result = ai.generate_caption(post.update, post.post_type, style=style)
     post.caption = result["caption"]
     post.hashtags = result["hashtags"]
     post.ai_caption_used = True
     post.updated_at = datetime.utcnow()
     db.session.commit()
-    return jsonify({"caption": post.caption, "hashtags": post.hashtags})
+    return jsonify({"caption": post.caption, "hashtags": post.hashtags,
+                    "style": result.get("style", style)})
 
 
 @dashboard_bp.route("/posts/<int:pid>/regenerate-image", methods=["POST"])
