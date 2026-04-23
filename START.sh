@@ -30,7 +30,10 @@ git pull origin claude/pw-pcb-updates-app-bNCnt 2>/dev/null || echo "  (already 
 
 # ── Step 2: Install Python packages ──────────────────────────────────────
 echo -e "${YELLOW}[2/6] Installing Python packages...${NC}"
-pip install -q -r requirements.txt && echo -e "  ${GREEN}✓ Packages ready${NC}"
+# Install Pillow via pkg first (avoids build errors on Termux)
+pkg install -y python-pillow 2>/dev/null || true
+pip install -q -r requirements.txt 2>/dev/null || pip install -q -r requirements.txt --no-build-isolation
+echo -e "  ${GREEN}✓ Packages ready${NC}"
 
 # ── Step 3: Create .env if missing ───────────────────────────────────────
 echo -e "${YELLOW}[3/6] Checking .env file...${NC}"

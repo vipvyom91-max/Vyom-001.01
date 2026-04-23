@@ -22,7 +22,8 @@ _RATE_LIMITED_TYPES = {"telegram", "youtube", "youtube_community"}
 def get_scheduler() -> BackgroundScheduler:
     global _scheduler
     if _scheduler is None:
-        _scheduler = BackgroundScheduler(timezone="UTC")
+        import pytz
+        _scheduler = BackgroundScheduler(timezone=pytz.utc)
     return _scheduler
 
 
