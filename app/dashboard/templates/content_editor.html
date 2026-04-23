@@ -108,15 +108,23 @@
         {% endif %}
 
         {% if post.update_id %}
+        <button type="button" class="btn btn-outline-warning" onclick="regenerateCaption({{ post.id }})">
+          <i class="bi bi-magic"></i> Regen Caption
+        </button>
         <button type="button" class="btn btn-outline-secondary" onclick="regenerateImage({{ post.id }})">
           <i class="bi bi-image"></i> Regen Image
         </button>
         {% endif %}
 
         {% if post.status != 'posted' %}
+        {% if ig_configured %}
+        <button type="button" class="btn btn-danger" onclick="postNow({{ post.id }})" title="Post directly to Instagram now">
+          <i class="bi bi-instagram"></i> Post Now
+        </button>
+        {% endif %}
         <form method="POST" action="{{ url_for('dashboard.mark_posted', pid=post.id) }}" class="d-inline">
           <button type="submit" class="btn btn-success" onclick="return confirm('Mark this as posted to Instagram?')">
-            <i class="bi bi-instagram"></i> Mark as Posted
+            <i class="bi bi-check2"></i> Mark as Posted
           </button>
         </form>
         {% else %}
@@ -134,8 +142,15 @@
           <i class="bi bi-instagram fs-5" style="color:#E1306C"></i>
           <span class="fw-semibold">Post to Instagram</span>
         </div>
+        {% if ig_configured %}
+        <p class="text-muted small mb-2">
+          <strong>Auto:</strong> Tap <span class="badge bg-danger">Post Now</span> to post directly from here (set <code>INSTAGRAM_USERNAME</code> + <code>INSTAGRAM_PASSWORD</code> in <code>.env</code>).
+        </p>
+        <hr class="border-secondary my-2">
+        {% endif %}
+        <p class="text-muted small mb-1"><strong>Manual:</strong></p>
         <ol class="text-muted small mb-0 ps-3">
-          <li>Tap <strong>Save Image</strong> above → it downloads to your phone</li>
+          <li>Tap <strong>Save Image</strong> → downloads to your phone</li>
           <li>Tap <strong>Copy Caption</strong> → caption + hashtags copied</li>
           <li>Open Instagram → tap <strong>+</strong> → pick the saved image</li>
           <li>Paste the caption → Post!</li>

@@ -240,7 +240,11 @@ def new_post():
 def edit_post(pid):
     post = Post.query.get_or_404(pid)
     update = post.update if post.update_id else None
-    return render_template("content_editor.html", post=post, update=update)
+    ig_configured = bool(
+        AppConfig.INSTAGRAM_USERNAME or AppConfig.INSTAGRAM_ACCESS_TOKEN
+    )
+    return render_template("content_editor.html", post=post, update=update,
+                           ig_configured=ig_configured)
 
 
 @dashboard_bp.route("/posts/<int:pid>/save", methods=["POST"])

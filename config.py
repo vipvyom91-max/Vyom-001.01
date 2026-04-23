@@ -39,9 +39,13 @@ class Config:
         if a.strip()
     ]
 
-    # Instagram
+    # Instagram — instagrapi (direct, works on Termux without public URL)
     INSTAGRAM_USERNAME = os.environ.get("INSTAGRAM_USERNAME", "")
     INSTAGRAM_PASSWORD = os.environ.get("INSTAGRAM_PASSWORD", "")
+    # Instagram — Graph API (requires a public URL for images)
+    INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN", "")
+    INSTAGRAM_BUSINESS_ACCOUNT_ID = os.environ.get("INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
+    PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "")  # e.g. https://yourserver.com
 
     # Anthropic / Claude
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")

@@ -13,7 +13,10 @@
       {{ s|title if s else 'All' }}
     </a>
     {% endfor %}
-    <a href="{{ url_for('dashboard.new_post') }}" class="btn btn-sm btn-outline-success ms-auto">
+    <a href="/api/download-posts-zip" class="btn btn-sm btn-outline-info ms-auto" title="Download all draft posts (images + captions) as a zip file">
+      <i class="bi bi-file-zip"></i> Download All Drafts
+    </a>
+    <a href="{{ url_for('dashboard.new_post') }}" class="btn btn-sm btn-outline-success">
       <i class="bi bi-plus-lg"></i> New Manual Post
     </a>
   </div>
