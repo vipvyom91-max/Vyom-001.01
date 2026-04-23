@@ -4,6 +4,35 @@ from config import Config
 
 db = SQLAlchemy()
 
+ALL_DEFAULT_SOURCES = [
+    # ── YouTube (needs API key) ───────────────────────────────────────────
+    ("PW Alakh Pandey (YouTube)",   "youtube",  "UCiGyWN6DEbnj2alu7iapuKQ"),
+    ("PW NEET (YouTube)",           "youtube",  "UCGw8iWmsw1cPlfcrww-3C0g"),
+    ("NCERT Wallah (YouTube)",      "youtube",  "UC8zCnnfhz-dvIpVdZ1CheuA"),
+
+    # ── YouTube RSS (no API key needed) ───────────────────────────────────
+    ("PW Alakh Pandey (RSS)",       "rss", "https://www.youtube.com/feeds/videos.xml?channel_id=UCiGyWN6DEbnj2alu7iapuKQ"),
+    ("PW NEET (RSS)",               "rss", "https://www.youtube.com/feeds/videos.xml?channel_id=UCGw8iWmsw1cPlfcrww-3C0g"),
+    ("NCERT Wallah (RSS)",          "rss", "https://www.youtube.com/feeds/videos.xml?channel_id=UC8zCnnfhz-dvIpVdZ1CheuA"),
+
+    # ── Google News RSS — news articles about PW ─────────────────────────
+    ("PW News – NEET",              "rss", "https://news.google.com/rss/search?q=Physics+Wallah+NEET+2025&hl=en-IN&gl=IN&ceid=IN:en"),
+    ("PW News – Class 12",          "rss", "https://news.google.com/rss/search?q=Physics+Wallah+class+12+PCB&hl=en-IN&gl=IN&ceid=IN:en"),
+    ("NEET 2025 Updates",           "rss", "https://news.google.com/rss/search?q=NEET+2025+exam+syllabus+update&hl=en-IN&gl=IN&ceid=IN:en"),
+
+    # ── Telegram channels ─────────────────────────────────────────────────
+    ("PW Official Telegram",        "telegram", "physicswallah"),
+    ("Alakh Pandey Telegram",       "telegram", "AlakhPandey"),
+    ("PW Live Telegram",            "telegram", "pwlive"),
+    ("PW NEET PCB Telegram",        "telegram", "pw_neet_pcb"),
+    ("Biology Wallah Telegram",     "telegram", "BiologyWallah"),
+    ("NCERT Wallah Telegram",       "telegram", "ncertwallah"),
+    ("PW Chemistry Telegram",       "telegram", "PWchemistry"),
+    ("PW Physics Telegram",         "telegram", "PWphysics"),
+    ("Yakeen Batch Telegram",       "telegram", "yakeenbatch"),
+    ("PW Yakeen Telegram",          "telegram", "pwyakeen"),
+]
+
 
 def create_app(config_class=Config):
     app = Flask(
@@ -28,34 +57,19 @@ def create_app(config_class=Config):
 
 
 def _seed_default_sources():
-    """Add default PW sources on first run (idempotent)."""
+    """Add default PW sources (idempotent — skips existing by name)."""
     from app.models import Source
-    if Source.query.count() > 0:
-        return
-    defaults = [
-        ("PW Alakh Pandey (YouTube)", "youtube",  "UCiGyWN6DEbnj2alu7iapuKQ"),
-        ("PW NEET (YouTube)",        "youtube",  "UCGw8iWmsw1cPlfcrww-3C0g"),
-        ("NCERT Wallah (YouTube)",   "youtube",  "UC8zCnnfhz-dvIpVdZ1CheuA"),
-        ("PW YouTube (RSS fallback)","rss",      "https://www.youtube.com/feeds/videos.xml?channel_id=UCiGyWN6DEbnj2alu7iapuKQ"),
-        ("PW Official Telegram",     "telegram", "physicswallah"),
-        ("Alakh Pandey Telegram",    "telegram", "AlakhPandey"),
-        ("PW Live Telegram",         "telegram", "pwlive"),
-        ("PW NEET PCB Telegram",     "telegram", "pw_neet_pcb"),
-        ("Biology Wallah Telegram",  "telegram", "BiologyWallah"),
-        ("NCERT Wallah Telegram",    "telegram", "ncertwallah"),
-        ("PW Chemistry Telegram",    "telegram", "PWchemistry"),
-        ("PW Physics Telegram",      "telegram", "PWphysics"),
-        ("Yakeen Batch Telegram",    "telegram", "yakeenbatch"),
-        ("PW NEET RSS",              "rss",      "https://www.youtube.com/feeds/videos.xml?channel_id=UCGw8iWmsw1cPlfcrww-3C0g"),
-        ("NCERT Wallah RSS",         "rss",      "https://www.youtube.com/feeds/videos.xml?channel_id=UC8zCnnfhz-dvIpVdZ1CheuA"),
-    ]
-    for name, stype, ident in defaults:
-        src = Source(name=name, source_type=stype, identifier=ident)
-        db.session.add(src)
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+    existing_names = {s.name for s in Source.query.all()}
+    added = 0
+    for name, stype, ident in ALL_DEFAULT_SOURCES:
+        if name not in existing_names:
+            db.session.add(Source(name=name, source_type=stype, identifier=ident))
+            added += 1
+    if added:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 
 def _start_background_scheduler(app):

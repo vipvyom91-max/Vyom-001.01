@@ -126,6 +126,7 @@
   <p class="text-muted small mb-2">See which sources are ready and when they last ran.</p>
   <div class="d-flex gap-2 flex-wrap">
     <button class="btn btn-sm btn-outline-info" onclick="checkSources()">Check Sources</button>
+    <button class="btn btn-sm btn-outline-success" onclick="reseedSources()" title="Add new default sources (Google News RSS etc.) without removing existing">Add Missing Sources</button>
     <button class="btn btn-sm btn-outline-warning" onclick="resetSources()" title="Clear last-checked timestamp so next collect fetches all recent items">Reset Timestamps</button>
     <button class="btn btn-sm btn-outline-danger" onclick="purgeSpam()" title="Delete FREE COURSE ALERT and other promotional spam from Updates">Purge Spam</button>
   </div>
@@ -149,6 +150,19 @@
 
 {% block scripts %}
 <script>
+function reseedSources() {
+  fetch('/api/reseed-sources', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.count > 0) {
+        alert(`Added ${d.count} new sources:\n${d.added.join('\n')}`);
+      } else {
+        alert('All default sources already exist.');
+      }
+      location.reload();
+    });
+}
+
 function purgeSpam() {
   if (!confirm('Delete all "FREE COURSE ALERT" and promotional spam updates?')) return;
   fetch('/api/purge-spam', { method: 'POST' })

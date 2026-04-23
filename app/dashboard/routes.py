@@ -410,7 +410,7 @@ def api_reset_sources():
 
 @dashboard_bp.route("/api/purge-spam", methods=["POST"])
 def api_purge_spam():
-    """Delete Telegram updates whose title contains known spam phrases."""
+    """Delete spam updates and their generated posts."""
     spam_phrases = [
         "FREE COURSE ALERT", "Join Now", "Enroll Now", "Limited Seats",
         "Offer Expires", "Registration Open", "New Batch Starting",
@@ -419,16 +419,28 @@ def api_purge_spam():
     from app.models import Post
     deleted = 0
     for phrase in spam_phrases:
-        matches = Update.query.filter(
-            Update.title.ilike(f"%{phrase}%")
-        ).all()
+        matches = Update.query.filter(Update.title.ilike(f"%{phrase}%")).all()
         for u in matches:
-            # Also delete any posts generated from this update
-            Post.query.filter_by(source_update_id=u.id).delete()
+            Post.query.filter_by(update_id=u.id).delete()
             db.session.delete(u)
             deleted += 1
     db.session.commit()
     return jsonify({"ok": True, "deleted": deleted})
+
+
+@dashboard_bp.route("/api/reseed-sources", methods=["POST"])
+def api_reseed_sources():
+    """Add any missing default sources without touching existing ones."""
+    from app.models import Source
+    from app import ALL_DEFAULT_SOURCES
+    existing_names = {s.name for s in Source.query.all()}
+    added = []
+    for name, stype, ident in ALL_DEFAULT_SOURCES:
+        if name not in existing_names:
+            db.session.add(Source(name=name, source_type=stype, identifier=ident))
+            added.append(name)
+    db.session.commit()
+    return jsonify({"ok": True, "added": added, "count": len(added)})
 
 
 @dashboard_bp.route("/api/stats")

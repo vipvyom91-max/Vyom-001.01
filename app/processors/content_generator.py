@@ -9,9 +9,11 @@ logger = logging.getLogger(__name__)
 RELEVANCE_KEYWORDS = [
     "neet", "pcb", "class 12", "class12", "12th", "dpp", "lecture",
     "biology", "chemistry", "physics", "schedule", "batch", "alakh",
-    "yakeen", "pw", "physicsWallah", "medical", "revision",
+    "yakeen", "pw", "physicswallah", "medical", "revision", "ncert",
+    "chapter", "syllabus", "test", "notes", "formula", "live class",
+    "free class", "today", "tomorrow", "new video", "uploaded",
 ]
-BONUS_KEYWORDS = ["important", "live", "free", "new", "today", "just", "launch"]
+BONUS_KEYWORDS = ["important", "live", "new", "today", "just", "launch", "update", "alert", "now"]
 
 
 class ContentGenerator:
@@ -28,18 +30,15 @@ class ContentGenerator:
         update.relevance_score = score
         update.is_processed = True
 
-        if score < 0.35:
+        if score < 0.20:
             logger.debug(f"Update {update.id} scored {score:.2f} — skipping auto-post")
             return None
 
-        # Generate caption via Claude (or fallback)
         ai_result = self.caption_ai.generate_caption(update, "feed")
 
-        # Override category from AI if it looks valid
         if ai_result.get("category") and ai_result["category"] in ("Physics", "Chemistry", "Biology", "General"):
             update.category = ai_result["category"]
 
-        # Generate image
         template = CONTENT_TYPE_TEMPLATE_MAP.get(update.content_type or "general", "lecture_update")
         image_path = ""
         try:
@@ -67,20 +66,26 @@ class ContentGenerator:
         keyword_hits = sum(1 for kw in RELEVANCE_KEYWORDS if kw in text)
         bonus_hits = sum(1 for kw in BONUS_KEYWORDS if kw in text)
 
-        score = min(keyword_hits / 6, 0.55)
+        score = min(keyword_hits / 5, 0.55)
         score += min(bonus_hits / 4, 0.15)
 
         source_bonus = {
             "youtube": 0.20,
-            "telegram": 0.15,
+            "telegram": 0.25,  # Telegram is high-value for announcements
             "twitter": 0.10,
             "website": 0.10,
-            "rss": 0.05,
+            "rss": 0.10,
         }
         if update.source:
             score += source_bonus.get(update.source.source_type, 0)
 
-        type_bonus = {"lecture": 0.10, "dpp": 0.10, "schedule": 0.05}
+        type_bonus = {
+            "lecture": 0.10,
+            "dpp": 0.12,
+            "schedule": 0.12,
+            "announcement": 0.08,
+            "tip": 0.05,
+        }
         score += type_bonus.get(update.content_type or "", 0)
 
         return min(round(score, 3), 1.0)
