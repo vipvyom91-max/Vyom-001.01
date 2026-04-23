@@ -46,7 +46,8 @@ def _seed_default_sources():
         ("PW Chemistry Telegram",    "telegram", "PWchemistry"),
         ("PW Physics Telegram",      "telegram", "PWphysics"),
         ("Yakeen Batch Telegram",    "telegram", "yakeenbatch"),
-        ("PW Website",               "website",  "https://pw.live"),
+        ("PW NEET RSS",              "rss",      "https://www.youtube.com/feeds/videos.xml?channel_id=UCGw8iWmsw1cPlfcrww-3C0g"),
+        ("NCERT Wallah RSS",         "rss",      "https://www.youtube.com/feeds/videos.xml?channel_id=UC8zCnnfhz-dvIpVdZ1CheuA"),
     ]
     for name, stype, ident in defaults:
         src = Source(name=name, source_type=stype, identifier=ident)
