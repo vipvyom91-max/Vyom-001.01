@@ -11,6 +11,36 @@ from config import Config as AppConfig
 
 logger = logging.getLogger(__name__)
 
+_VIRAL_KEYWORDS = [
+    "today", "tomorrow", "tonight", "tonight", "live", "live class", "live now",
+    "free", "just dropped", "just uploaded", "breaking", "urgent", "important",
+    "new batch", "starting", "new video", "new lecture", "just announced",
+    "result", "answer key", "schedule", "dpp released", "notes out",
+]
+
+
+def _hot_score(update) -> int:
+    """Return 0-100 viral potential score."""
+    score = int((update.relevance_score or 0) * 50)
+    text = ((update.title or "") + " " + (update.body or "")).lower()
+    for kw in _VIRAL_KEYWORDS:
+        if kw in text:
+            score += 8
+    # Recency bonus
+    age_h = (datetime.utcnow() - update.collected_at).total_seconds() / 3600
+    if age_h < 1:
+        score += 25
+    elif age_h < 3:
+        score += 15
+    elif age_h < 6:
+        score += 8
+    # Source bonus: Telegram from dedicated channels = insider info
+    if update.source and update.source.source_type == "telegram":
+        score += 10
+    elif update.source and update.source.source_type == "youtube_community":
+        score += 12
+    return min(score, 100)
+
 
 # ── helpers ───────────────────────────────────────────────────────────────
 
@@ -38,6 +68,20 @@ def index():
     recent_updates = (
         Update.query.order_by(Update.collected_at.desc()).limit(10).all()
     )
+
+    # Hot updates: unprocessed, recent 24h, scored by viral potential
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    hot_candidates = (
+        Update.query
+        .filter(Update.is_queued == False, Update.collected_at >= cutoff)
+        .order_by(Update.collected_at.desc())
+        .limit(50)
+        .all()
+    )
+    hot_updates = sorted(hot_candidates, key=_hot_score, reverse=True)[:6]
+    for u in hot_updates:
+        u._hot_score = _hot_score(u)
+
     upcoming_posts = (
         ScheduledPost.query
         .filter_by(status="pending")
@@ -63,6 +107,7 @@ def index():
         scheduled_count=scheduled_count,
         published_count=published_count,
         recent_updates=recent_updates,
+        hot_updates=hot_updates,
         upcoming_posts=upcoming_posts,
         recent_logs=recent_logs,
         chart_labels=json.dumps(chart_labels),
@@ -130,6 +175,37 @@ def promote_update(uid):
         return redirect(url_for("dashboard.updates"))
 
 
+@dashboard_bp.route("/api/bulk-promote", methods=["POST"])
+def api_bulk_promote():
+    """Promote multiple updates to draft posts at once."""
+    ids = request.json.get("ids", []) if request.is_json else request.form.getlist("ids")
+    from app.processors.content_generator import ContentGenerator
+    gen = ContentGenerator(AppConfig)
+    created = 0
+    skipped = 0
+    for uid in ids:
+        upd = Update.query.get(int(uid))
+        if not upd or upd.is_queued:
+            skipped += 1
+            continue
+        post = gen.process_update(upd)
+        if post:
+            db.session.add(post)
+            upd.is_queued = True
+            created += 1
+        else:
+            # Force-create even if score is low
+            upd.relevance_score = max(upd.relevance_score or 0, 0.21)
+            post = gen.process_update(upd)
+            if post:
+                db.session.add(post)
+                upd.is_queued = True
+                created += 1
+    db.session.commit()
+    _bump_stat("posts_created", created)
+    return jsonify({"ok": True, "created": created, "skipped": skipped})
+
+
 # ── Posts ─────────────────────────────────────────────────────────────────
 
 @dashboard_bp.route("/posts")
@@ -177,6 +253,17 @@ def save_post(pid):
     post.updated_at = datetime.utcnow()
     db.session.commit()
     flash("Post saved!", "success")
+    return redirect(url_for("dashboard.edit_post", pid=pid))
+
+
+@dashboard_bp.route("/posts/<int:pid>/mark-posted", methods=["POST"])
+def mark_posted(pid):
+    post = Post.query.get_or_404(pid)
+    post.status = "posted"
+    post.updated_at = datetime.utcnow()
+    db.session.commit()
+    _bump_stat("posts_published")
+    flash("Marked as posted to Instagram!", "success")
     return redirect(url_for("dashboard.edit_post", pid=pid))
 
 

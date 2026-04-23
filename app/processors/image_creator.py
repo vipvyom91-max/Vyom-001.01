@@ -133,11 +133,29 @@ class ImageCreator:
 
     def _load_font(self, size: int):
         from PIL import ImageFont
+        font_dir = Path(__file__).parent.parent / "dashboard" / "static" / "fonts"
+        font_dir.mkdir(parents=True, exist_ok=True)
+        bold_path = font_dir / "Poppins-Bold.ttf"
+        reg_path = font_dir / "Poppins-Regular.ttf"
+
+        # Auto-download Poppins if not present (one-time)
+        if not bold_path.exists():
+            self._download_font(
+                "https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Bold.ttf",
+                bold_path,
+            )
+        if not reg_path.exists():
+            self._download_font(
+                "https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Regular.ttf",
+                reg_path,
+            )
+
         font_paths = [
-            str(Path(__file__).parent.parent / "dashboard" / "static" / "fonts" / "Poppins-Bold.ttf"),
-            str(Path(__file__).parent.parent / "dashboard" / "static" / "fonts" / "Poppins-Regular.ttf"),
+            str(bold_path),
+            str(reg_path),
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+            "/data/data/com.termux/files/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
         ]
         for path in font_paths:
             if os.path.exists(path):
@@ -145,4 +163,16 @@ class ImageCreator:
                     return ImageFont.truetype(path, size)
                 except Exception:
                     continue
-        return ImageFont.load_default()
+        try:
+            return ImageFont.load_default(size=size)
+        except TypeError:
+            return ImageFont.load_default()
+
+    @staticmethod
+    def _download_font(url: str, dest: Path):
+        try:
+            import urllib.request
+            logger.info(f"Downloading font from {url}")
+            urllib.request.urlretrieve(url, str(dest))
+        except Exception as e:
+            logger.warning(f"Font download failed: {e}")

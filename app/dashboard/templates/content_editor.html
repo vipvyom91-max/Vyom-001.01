@@ -113,6 +113,16 @@
         </button>
         {% endif %}
 
+        {% if post.status != 'posted' %}
+        <form method="POST" action="{{ url_for('dashboard.mark_posted', pid=post.id) }}" class="d-inline">
+          <button type="submit" class="btn btn-success" onclick="return confirm('Mark this as posted to Instagram?')">
+            <i class="bi bi-instagram"></i> Mark as Posted
+          </button>
+        </form>
+        {% else %}
+        <span class="btn btn-success pe-none"><i class="bi bi-check-circle-fill"></i> Posted to IG</span>
+        {% endif %}
+
         <a href="{{ url_for('dashboard.posts') }}" class="btn btn-outline-secondary">Back</a>
         {% endif %}
       </div>

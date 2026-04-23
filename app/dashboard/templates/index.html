@@ -39,6 +39,49 @@
   </div>
 </div>
 
+<!-- 🔥 What's Hot -->
+{% if hot_updates %}
+<div class="pw-card mb-4" style="border-left:3px solid #ef4444">
+  <div class="pw-card-header">
+    <span style="color:#ef4444"><i class="bi bi-fire me-2"></i>What's Hot — Post These Before They Go Viral!</span>
+    <button class="btn btn-sm btn-outline-danger" onclick="promoteAll()">
+      <i class="bi bi-magic"></i> Promote All
+    </button>
+  </div>
+  <div class="row g-2 p-3">
+    {% for u in hot_updates %}
+    <div class="col-12 col-md-6">
+      <div class="d-flex gap-2 align-items-start p-2 rounded" style="background:#1a1a2e;border:1px solid #2a2a3e">
+        <!-- Hot score badge -->
+        <div class="text-center flex-shrink-0" style="min-width:44px">
+          <div style="font-size:18px;font-weight:800;color:{% if u._hot_score >= 70 %}#ef4444{% elif u._hot_score >= 50 %}#f59e0b{% else %}#7c3aed{% endif %}">{{ u._hot_score }}</div>
+          <div style="font-size:9px;color:#888">HOT</div>
+        </div>
+        <div class="flex-grow-1 overflow-hidden">
+          <div class="fw-semibold small text-truncate">
+            {% if u.url %}<a href="{{ u.url }}" target="_blank" class="text-light text-decoration-none">{{ u.title }}</a>
+            {% else %}{{ u.title }}{% endif %}
+          </div>
+          <div class="d-flex gap-1 mt-1 flex-wrap">
+            <span class="badge bg-secondary" style="font-size:9px">{{ u.source.source_type }}</span>
+            <span class="badge badge-type badge-{{ u.content_type }}" style="font-size:9px">{{ u.content_type }}</span>
+            {% if u.category %}<span class="badge bg-dark border border-secondary" style="font-size:9px">{{ u.category }}</span>{% endif %}
+          </div>
+        </div>
+        {% if not u.is_queued %}
+        <form method="POST" action="{{ url_for('dashboard.promote_update', uid=u.id) }}" class="flex-shrink-0">
+          <button class="btn btn-xs btn-accent" type="submit"><i class="bi bi-magic"></i></button>
+        </form>
+        {% else %}
+        <span class="badge bg-success flex-shrink-0"><i class="bi bi-check2"></i></span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-3">
   <!-- Left column: updates + upcoming -->
   <div class="col-lg-8">
@@ -170,6 +213,21 @@
 
 {% block scripts %}
 <script>
+function promoteAll() {
+  const ids = {{ hot_updates | map(attribute='id') | list | tojson }};
+  if (!ids.length) return;
+  fetch('/api/bulk-promote', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids})
+  })
+  .then(r => r.json())
+  .then(d => {
+    showToast(`Created ${d.created} draft posts!`, 'success');
+    setTimeout(() => location.reload(), 1500);
+  });
+}
+
 const chartLabels = {{ chart_labels|safe }};
 const chartData = {{ chart_data|safe }};
 const ctx = document.getElementById('postsChart').getContext('2d');
