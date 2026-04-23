@@ -37,6 +37,15 @@ def _seed_default_sources():
         ("PW NEET (YouTube)",        "youtube",  "UCGw8iWmsw1cPlfcrww-3C0g"),
         ("NCERT Wallah (YouTube)",   "youtube",  "UC8zCnnfhz-dvIpVdZ1CheuA"),
         ("PW YouTube (RSS fallback)","rss",      "https://www.youtube.com/feeds/videos.xml?channel_id=UCiGyWN6DEbnj2alu7iapuKQ"),
+        ("PW Official Telegram",     "telegram", "physicswallah"),
+        ("Alakh Pandey Telegram",    "telegram", "AlakhPandey"),
+        ("PW Live Telegram",         "telegram", "pwlive"),
+        ("PW NEET PCB Telegram",     "telegram", "pw_neet_pcb"),
+        ("Biology Wallah Telegram",  "telegram", "BiologyWallah"),
+        ("NCERT Wallah Telegram",    "telegram", "ncertwallah"),
+        ("PW Chemistry Telegram",    "telegram", "PWchemistry"),
+        ("PW Physics Telegram",      "telegram", "PWphysics"),
+        ("Yakeen Batch Telegram",    "telegram", "yakeenbatch"),
         ("PW Website",               "website",  "https://pw.live"),
     ]
     for name, stype, ident in defaults:

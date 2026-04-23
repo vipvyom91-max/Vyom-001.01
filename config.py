@@ -24,7 +24,7 @@ class Config:
         c.strip()
         for c in os.environ.get(
             "PW_TELEGRAM_CHANNELS",
-            "physicswallah,pw_neet_pcb",
+            "physicswallah,AlakhPandey,pwlive,pw_neet_pcb,BiologyWallah,ncertwallah,PWchemistry,PWphysics,yakeenbatch,pwyakeen",
         ).split(",")
         if c.strip()
     ]
