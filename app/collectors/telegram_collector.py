@@ -1,10 +1,18 @@
 import asyncio
+import html
 import logging
 from datetime import datetime, timezone
 
 from app.collectors.base import BaseCollector
 
 logger = logging.getLogger(__name__)
+
+PCB_KEYWORDS = [
+    "neet", "pcb", "physics", "chemistry", "biology", "class 12", "class12",
+    "12th", "medical", "alakh", "dpp", "lecture", "yakeen", "batch", "revision",
+    "botany", "zoology", "organic", "inorganic", "mechanics", "electro",
+    "schedule", "test", "syllabus", "chapter", "free class", "live class",
+]
 
 
 class TelegramCollector(BaseCollector):
@@ -23,7 +31,7 @@ class TelegramCollector(BaseCollector):
     async def _async_collect(self) -> list[dict]:
         try:
             from telethon import TelegramClient
-            from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+            from telethon.tl.types import MessageMediaPhoto
         except ImportError:
             logger.error("telethon not installed")
             return []
@@ -42,18 +50,24 @@ class TelegramCollector(BaseCollector):
                 since = since.replace(tzinfo=timezone.utc)
 
             try:
-                async for message in client.iter_messages(channel, limit=30):
+                async for message in client.iter_messages(channel, limit=50):
                     if since and message.date and message.date < since:
                         break
-                    if not message.text:
+                    text = message.text or ""
+                    if not text or len(text) < 20:
+                        continue
+                    # Only keep PCB/NEET relevant messages
+                    text_lower = text.lower()
+                    if not any(kw in text_lower for kw in PCB_KEYWORDS):
                         continue
                     media_url = ""
                     if message.media and isinstance(message.media, MessageMediaPhoto):
                         media_url = "[photo attached]"
+                    clean_text = html.unescape(text)
                     results.append(self.normalize({
                         "external_id": str(message.id),
-                        "title": (message.text or "")[:120],
-                        "body": message.text or "",
+                        "title": clean_text[:120],
+                        "body": clean_text,
                         "url": f"https://t.me/{channel.lstrip('@')}/{message.id}",
                         "media_url": media_url,
                         "published_at": message.date,
