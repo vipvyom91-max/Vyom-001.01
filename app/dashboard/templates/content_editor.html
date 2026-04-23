@@ -97,8 +97,18 @@
         <button type="submit" class="btn btn-accent"><i class="bi bi-floppy"></i> Save Draft</button>
 
         {% if post %}
+        <button type="button" class="btn btn-outline-success" onclick="copyCaption()" title="Copy caption + hashtags to clipboard">
+          <i class="bi bi-clipboard"></i> Copy Caption
+        </button>
+
+        {% if post.image_path %}
+        <a href="{{ url_for('dashboard.download_image', pid=post.id) }}" class="btn btn-outline-info" download>
+          <i class="bi bi-download"></i> Save Image
+        </a>
+        {% endif %}
+
         {% if post.update_id %}
-        <button type="button" class="btn btn-outline-accent" onclick="regenerateImage({{ post.id }})">
+        <button type="button" class="btn btn-outline-secondary" onclick="regenerateImage({{ post.id }})">
           <i class="bi bi-image"></i> Regen Image
         </button>
         {% endif %}
@@ -106,6 +116,22 @@
         <a href="{{ url_for('dashboard.posts') }}" class="btn btn-outline-secondary">Back</a>
         {% endif %}
       </div>
+
+      <!-- Instagram posting guide -->
+      {% if post %}
+      <div class="pw-card p-3 mb-3" style="border-left:3px solid #E1306C">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <i class="bi bi-instagram fs-5" style="color:#E1306C"></i>
+          <span class="fw-semibold">Post to Instagram</span>
+        </div>
+        <ol class="text-muted small mb-0 ps-3">
+          <li>Tap <strong>Save Image</strong> above → it downloads to your phone</li>
+          <li>Tap <strong>Copy Caption</strong> → caption + hashtags copied</li>
+          <li>Open Instagram → tap <strong>+</strong> → pick the saved image</li>
+          <li>Paste the caption → Post!</li>
+        </ol>
+      </div>
+      {% endif %}
 
       <!-- Schedule panel (collapsible) -->
       {% if post %}
@@ -214,6 +240,24 @@ function updatePreviewFrame(type) {
   const wrap = document.getElementById('img-preview-wrap');
   if (!wrap) return;
   wrap.style.aspectRatio = type === 'story' ? '9/16' : '1/1';
+}
+
+function copyCaption() {
+  const cap = captionTA ? captionTA.value : '';
+  const tags = hashtagsTA ? hashtagsTA.value : '';
+  const full = tags ? cap + '\n\n' + tags : cap;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(full).then(() => showToast('Caption copied to clipboard!', 'success'));
+  } else {
+    // Fallback for older browsers / Android WebView
+    const el = document.createElement('textarea');
+    el.value = full;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showToast('Caption copied!', 'success');
+  }
 }
 
 function regenerateCaption(postId) {

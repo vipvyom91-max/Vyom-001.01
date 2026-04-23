@@ -3,9 +3,21 @@
 {% block page_title %}All Updates{% endblock %}
 
 {% block content %}
-<!-- Filters -->
+<!-- Search + Filters -->
 <div class="pw-card mb-3">
   <form method="GET" class="row g-2 p-3 align-items-end">
+    <!-- Search bar -->
+    <div class="col-12">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" class="form-control bg-dark text-light border-secondary"
+               placeholder="Search updates… (e.g. physics chapter, schedule, DPP)"
+               value="{{ search_q }}">
+        {% if search_q %}
+        <a href="{{ url_for('dashboard.updates') }}" class="btn btn-outline-secondary btn-sm">✕ Clear</a>
+        {% endif %}
+      </div>
+    </div>
     <div class="col-6 col-md-3">
       <label class="form-label text-muted small">Source</label>
       <select name="source" class="form-select form-select-sm bg-dark text-light border-secondary">
@@ -77,11 +89,16 @@
             <img src="{{ u.media_url }}" width="40" height="40" style="object-fit:cover;border-radius:4px;float:left;margin-right:8px">
             {% endif %}
             <div>
-              <div class="fw-semibold text-truncate" style="max-width:280px">
+              <div class="fw-semibold" style="max-width:300px">
                 {% if u.url %}<a href="{{ u.url }}" target="_blank" class="text-light text-decoration-none">{{ u.title }}</a>
                 {% else %}{{ u.title }}{% endif %}
               </div>
-              <div class="text-muted small text-truncate" style="max-width:280px">{{ (u.body or '')[:100] }}</div>
+              {% if u.body %}
+              <div class="text-muted small update-body-preview" style="max-width:300px;cursor:pointer"
+                   onclick="toggleBody(this)"
+                   data-full="{{ u.body | e }}"
+                   title="Click to expand">{{ (u.body or '')[:120] }}{% if (u.body|length) > 120 %}… <span class="text-accent">[more]</span>{% endif %}</div>
+              {% endif %}
             </div>
           </td>
           <td><span class="badge badge-type badge-{{ u.content_type }}">{{ u.content_type }}</span></td>
@@ -139,6 +156,20 @@
 
 {% block scripts %}
 <script>
+function toggleBody(el) {
+  if (el.dataset.expanded === '1') {
+    const preview = el.dataset.full.substring(0, 120);
+    el.innerHTML = preview + (el.dataset.full.length > 120 ? '… <span class="text-accent">[more]</span>' : '');
+    el.dataset.expanded = '0';
+    el.style.whiteSpace = '';
+  } else {
+    el.innerHTML = el.dataset.full.replace(/\n/g, '<br>') + ' <span class="text-accent">[less]</span>';
+    el.dataset.expanded = '1';
+    el.style.whiteSpace = 'normal';
+    el.style.maxWidth = '100%';
+  }
+}
+
 function toggleStar(btn) {
   const uid = btn.dataset.uid;
   fetch(`/updates/${uid}/star`, { method: 'POST' })

@@ -79,6 +79,7 @@ def updates():
     category_filter = request.args.get("category", "")
     type_filter = request.args.get("type", "")
     starred_only = request.args.get("starred", "") == "1"
+    search_q = request.args.get("q", "").strip()
 
     q = Update.query.order_by(Update.collected_at.desc())
     if source_filter:
@@ -89,12 +90,18 @@ def updates():
         q = q.filter(Update.content_type == type_filter)
     if starred_only:
         q = q.filter(Update.is_starred == True)
+    if search_q:
+        like = f"%{search_q}%"
+        q = q.filter(
+            db.or_(Update.title.ilike(like), Update.body.ilike(like))
+        )
 
-    pagination = q.paginate(page=page, per_page=20)
+    pagination = q.paginate(page=page, per_page=25)
     sources = Source.query.filter_by(is_active=True).all()
     return render_template("updates.html", pagination=pagination, sources=sources,
                            source_filter=source_filter, category_filter=category_filter,
-                           type_filter=type_filter, starred_only=starred_only)
+                           type_filter=type_filter, starred_only=starred_only,
+                           search_q=search_q)
 
 
 @dashboard_bp.route("/updates/<int:uid>/star", methods=["POST"])
@@ -205,6 +212,32 @@ def regenerate_image(pid):
     post.updated_at = datetime.utcnow()
     db.session.commit()
     return jsonify({"image_path": path, "image_url": f"/static/{path}"})
+
+
+@dashboard_bp.route("/posts/<int:pid>/download-image")
+def download_image(pid):
+    """Serve post image as a downloadable file."""
+    import os
+    from flask import send_file
+    post = Post.query.get_or_404(pid)
+    if not post.image_path:
+        return "No image", 404
+    full_path = os.path.join(
+        current_app.static_folder, post.image_path.replace("generated/", "generated/")
+    )
+    if not os.path.exists(full_path):
+        return "Image file not found", 404
+    filename = f"pw_post_{pid}.png"
+    return send_file(full_path, as_attachment=True, download_name=filename)
+
+
+@dashboard_bp.route("/posts/<int:pid>/caption.txt")
+def get_caption_text(pid):
+    """Return full caption + hashtags as plain text for easy copying."""
+    from flask import Response
+    post = Post.query.get_or_404(pid)
+    body = post.full_caption or ""
+    return Response(body, mimetype="text/plain")
 
 
 @dashboard_bp.route("/posts/<int:pid>/schedule", methods=["POST"])

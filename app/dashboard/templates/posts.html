@@ -41,17 +41,18 @@
           <span class="badge bg-secondary">{{ post.post_type }}</span>
         </div>
       </div>
-      <div class="post-actions p-2 pt-0 d-flex gap-1">
+      <div class="post-actions p-2 pt-0 d-flex gap-1 flex-wrap">
         <a href="{{ url_for('dashboard.edit_post', pid=post.id) }}" class="btn btn-xs btn-outline-light flex-grow-1">
           <i class="bi bi-pencil"></i> Edit
         </a>
-        {% if post.status == 'draft' %}
-        <a href="{{ url_for('dashboard.edit_post', pid=post.id) }}#schedule" class="btn btn-xs btn-accent flex-grow-1">
-          <i class="bi bi-clock"></i> Schedule
+        {% if post.image_path %}
+        <a href="{{ url_for('dashboard.download_image', pid=post.id) }}" class="btn btn-xs btn-outline-info" title="Download image" download>
+          <i class="bi bi-download"></i>
         </a>
-        {% elif post.status == 'posted' and post.instagram_post_id %}
-        <span class="btn btn-xs btn-success flex-grow-1 pe-none"><i class="bi bi-check2"></i> Posted</span>
         {% endif %}
+        <button class="btn btn-xs btn-outline-success" onclick="copyPostCaption({{ post.id }}, this)" title="Copy caption">
+          <i class="bi bi-clipboard"></i>
+        </button>
       </div>
     </div>
   </div>
@@ -89,4 +90,27 @@
   </nav>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyPostCaption(pid, btn) {
+  fetch(`/posts/${pid}/caption.txt`)
+    .then(r => r.text())
+    .then(text => {
+      const doCopy = () => {
+        btn.innerHTML = '<i class="bi bi-check2"></i>';
+        setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 2000);
+      };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(doCopy);
+      } else {
+        const el = document.createElement('textarea');
+        el.value = text; document.body.appendChild(el);
+        el.select(); document.execCommand('copy');
+        document.body.removeChild(el); doCopy();
+      }
+    });
+}
+</script>
 {% endblock %}
