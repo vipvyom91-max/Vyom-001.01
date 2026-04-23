@@ -1,3 +1,4 @@
+import html
 import logging
 from datetime import datetime, timezone
 
@@ -45,8 +46,8 @@ class YouTubeCollector(BaseCollector):
     def normalize(self, raw: dict) -> dict:
         snippet = raw.get("snippet", {})
         video_id = raw.get("id", {}).get("videoId", "")
-        title = snippet.get("title", "")
-        description = snippet.get("description", "")
+        title = html.unescape(snippet.get("title", ""))
+        description = html.unescape(snippet.get("description", ""))
         published_str = snippet.get("publishedAt", "")
 
         published_at = None

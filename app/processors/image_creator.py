@@ -69,7 +69,7 @@ class ImageCreator:
         title = update.title or "PW Update"
         body_text = (update.body or "")[:200]
 
-        img = self._create_gradient_bg(size, cfg["bg"])
+        img = self._create_gradient_bg(size, cfg["bg"]).convert("RGBA")
         draw = ImageDraw.Draw(img)
 
         # Geometric accent shapes
@@ -85,11 +85,11 @@ class ImageCreator:
         draw.text((80, 68), label, fill="white", font=font_small)
 
         # PW watermark top-right
-        draw.text((size[0] - 160, 65), "PW PCB", fill=(255, 255, 255, 180), font=font_medium)
+        draw.text((size[0] - 160, 65), "PW PCB", fill=(255, 255, 255), font=font_medium)
 
         # Title block
         wrapped_title = textwrap.fill(title, width=28)
-        draw.rectangle([0, size[1] - 480, size[0], size[1]], fill=(0, 0, 0, 180))
+        draw.rectangle([0, size[1] - 480, size[0], size[1]], fill=(0, 0, 0, 160))
         draw.text((60, size[1] - 460), wrapped_title, fill="white", font=font_large)
 
         # Body snippet

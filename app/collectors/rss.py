@@ -1,3 +1,4 @@
+import html
 import logging
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -46,8 +47,8 @@ class RSSCollector(BaseCollector):
         return results
 
     def normalize(self, raw: dict) -> dict:
-        title = raw.get("title", "")
-        body = raw.get("body", "")
+        title = html.unescape(raw.get("title", ""))
+        body = html.unescape(raw.get("body", ""))
         return {
             "external_id": raw.get("external_id"),
             "title": title[:500],
