@@ -62,7 +62,10 @@ def _run_collection(app):
         total_collected = 0
         total_posts = 0
 
+        from app.models import CollectionLog
+
         for source in sources:
+            log = CollectionLog(source_id=source.id, source_name=source.name)
             try:
                 collector = get_collector_for_source(source, Config)
                 raw_items = collector.collect()
@@ -79,9 +82,11 @@ def _run_collection(app):
                         db.session.add(post)
                         posts_created += 1
                 total_posts += posts_created
-                db.session.commit()
 
                 source.last_checked_at = datetime.utcnow()
+                log.status = "success"
+                log.items_collected = saved
+                db.session.add(log)
                 db.session.commit()
 
                 if saved or posts_created:
@@ -94,6 +99,14 @@ def _run_collection(app):
             except Exception as e:
                 logger.error(f"Collection failed for {source.name}: {e}")
                 db.session.rollback()
+                log.status = "error"
+                log.error_message = str(e)[:500]
+                log.items_collected = 0
+                try:
+                    db.session.add(log)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
 
         logger.info(f"Collection complete — updates={total_collected} posts={total_posts}")
 

@@ -519,6 +519,7 @@ def api_collect_now():
         total = 0
         source_results = []
         for source in sources:
+            log = CollectionLog(source_id=source.id, source_name=source.name)
             try:
                 collector = get_collector_for_source(source, AppConfig)
                 raw_items = collector.collect()
@@ -534,12 +535,24 @@ def api_collect_now():
                     if post:
                         db.session.add(post)
                         _bump_stat("posts_created")
+                log.status = "success"
+                log.items_collected = saved
+                db.session.add(log)
                 db.session.commit()
                 _bump_stat("updates_collected", saved)
                 total += saved
                 source_results.append({"name": source.name, "type": source.source_type, "saved": saved})
             except Exception as e:
                 logger.error(f"Collection error for {source.name}: {e}")
+                db.session.rollback()
+                log.status = "error"
+                log.error_message = str(e)[:500]
+                log.items_collected = 0
+                try:
+                    db.session.add(log)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
                 source_results.append({"name": source.name, "type": source.source_type, "saved": 0, "error": str(e)})
         return jsonify({"ok": True, "collected": total, "sources": source_results})
     except Exception as e:
