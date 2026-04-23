@@ -343,13 +343,13 @@ def api_collect_now():
         sources = Source.query.filter_by(is_active=True).all()
         gen = ContentGenerator(AppConfig)
         total = 0
+        source_results = []
         for source in sources:
             try:
                 collector = get_collector_for_source(source, AppConfig)
                 raw_items = collector.collect()
                 saved = collector.save_updates(db.session, raw_items)
                 source.last_checked_at = datetime.utcnow()
-                # Process newly collected items
                 new_updates = (
                     Update.query
                     .filter_by(source_id=source.id, is_processed=False)
@@ -363,11 +363,49 @@ def api_collect_now():
                 db.session.commit()
                 _bump_stat("updates_collected", saved)
                 total += saved
+                source_results.append({"name": source.name, "type": source.source_type, "saved": saved})
             except Exception as e:
                 logger.error(f"Collection error for {source.name}: {e}")
-        return jsonify({"ok": True, "collected": total})
+                source_results.append({"name": source.name, "type": source.source_type, "saved": 0, "error": str(e)})
+        return jsonify({"ok": True, "collected": total, "sources": source_results})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@dashboard_bp.route("/api/debug-sources")
+def api_debug_sources():
+    """Quick check: which sources are active and what type they are."""
+    sources = Source.query.filter_by(is_active=True).all()
+    result = []
+    for s in sources:
+        entry = {
+            "id": s.id,
+            "name": s.name,
+            "type": s.source_type,
+            "identifier": s.identifier,
+            "last_checked_at": s.last_checked_at.isoformat() if s.last_checked_at else None,
+        }
+        if s.source_type == "youtube":
+            entry["ready"] = bool(AppConfig.YOUTUBE_API_KEY)
+            entry["note"] = "YouTube API key " + ("set" if AppConfig.YOUTUBE_API_KEY else "MISSING")
+        elif s.source_type == "telegram":
+            entry["ready"] = bool(AppConfig.TELEGRAM_API_ID and AppConfig.TELEGRAM_API_HASH)
+            entry["note"] = "Telegram creds " + ("set" if entry["ready"] else "MISSING")
+        else:
+            entry["ready"] = True
+            entry["note"] = "No API key needed"
+        result.append(entry)
+    return jsonify(result)
+
+
+@dashboard_bp.route("/api/reset-sources", methods=["POST"])
+def api_reset_sources():
+    """Clear last_checked_at on all sources so next collect fetches recent items."""
+    sources = Source.query.all()
+    for s in sources:
+        s.last_checked_at = None
+    db.session.commit()
+    return jsonify({"ok": True, "reset": len(sources)})
 
 
 @dashboard_bp.route("/api/stats")

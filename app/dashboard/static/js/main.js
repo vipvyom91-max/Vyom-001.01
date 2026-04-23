@@ -31,8 +31,20 @@ function collectNow() {
     .then(r => r.json())
     .then(d => {
       if (d.ok) {
-        showToast(`Collected ${d.collected} new update${d.collected !== 1 ? 's' : ''}!`, 'success');
-        setTimeout(() => location.reload(), 1500);
+        // Build per-source summary
+        const sources = d.sources || [];
+        const working = sources.filter(s => !s.error && s.saved > 0);
+        const errors = sources.filter(s => s.error);
+        const empty = sources.filter(s => !s.error && s.saved === 0);
+
+        if (d.collected > 0) {
+          showToast(`Got ${d.collected} new update${d.collected !== 1 ? 's' : ''}!`, 'success');
+        } else {
+          showToast(`No new updates (${sources.length} sources checked)`, 'info');
+        }
+        // Show errors separately
+        errors.forEach(s => showToast(`${s.name}: ${s.error.substring(0, 80)}`, 'danger'));
+        setTimeout(() => location.reload(), 2000);
       } else {
         showToast('Error: ' + (d.error || 'Unknown'), 'danger');
       }
