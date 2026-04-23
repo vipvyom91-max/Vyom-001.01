@@ -11,7 +11,10 @@ logger = logging.getLogger(__name__)
 DEDICATED_PCB_CHANNELS = {
     "pw_neet_pcb", "biologywallah", "pwchemistry", "pwphysics",
     "ncertwallah", "yakeenbatch", "pwyakeen", "pw_biology",
-    "pwbiologyneet", "pwneetbiology",
+    "pwbiologyneet", "pwneetbiology", "pwmaths", "pwnotes",
+    "pw_dpp", "pwenglish", "pwfoundation", "pwlakshya",
+    "pwvidyapeeth", "yakeenneet2025", "yakeenneet2026",
+    "pwbiologyneet", "pw_pariksha",
 }
 
 # PCB keyword filter for general channels
