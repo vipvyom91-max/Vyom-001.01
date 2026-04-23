@@ -9,9 +9,18 @@ logger = logging.getLogger(__name__)
 
 PCB_KEYWORDS = [
     "neet", "pcb", "physics", "chemistry", "biology", "class 12", "class12",
-    "12th", "medical", "alakh", "dpp", "lecture", "yakeen", "batch", "revision",
-    "botany", "zoology", "organic", "inorganic", "mechanics", "electro",
-    "schedule", "test", "syllabus", "chapter", "free class", "live class",
+    "12th", "medical", "alakh", "dpp", "lecture", "yakeen", "revision",
+    "botany", "zoology", "organic", "inorganic", "mechanics", "electrostatics",
+    "schedule", "test series", "syllabus", "chapter", "free class", "live class",
+    "notes", "formula", "numericals", "mcq", "question bank",
+]
+
+# Skip messages that are just promotional spam
+SPAM_PATTERNS = [
+    "free course alert", "join now", "enroll now", "limited seats",
+    "offer expires", "discount", "coupon", "hurry", "registration open",
+    "pay now", "buy now", "purchase", "₹", "rs.", "price", "fee",
+    "admission open", "new batch starting", "batch starting",
 ]
 
 
@@ -56,8 +65,11 @@ class TelegramCollector(BaseCollector):
                     text = message.text or ""
                     if not text or len(text) < 20:
                         continue
-                    # Only keep PCB/NEET relevant messages
                     text_lower = text.lower()
+                    # Skip promotional spam
+                    if any(sp in text_lower for sp in SPAM_PATTERNS):
+                        continue
+                    # Only keep PCB/NEET relevant messages
                     if not any(kw in text_lower for kw in PCB_KEYWORDS):
                         continue
                     media_url = ""

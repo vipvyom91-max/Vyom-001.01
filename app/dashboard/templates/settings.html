@@ -124,9 +124,10 @@
 <div class="pw-card p-3 mb-3">
   <h6 class="fw-semibold mb-3"><i class="bi bi-bug me-2 text-accent"></i>Source Status Check</h6>
   <p class="text-muted small mb-2">See which sources are ready and when they last ran.</p>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap">
     <button class="btn btn-sm btn-outline-info" onclick="checkSources()">Check Sources</button>
     <button class="btn btn-sm btn-outline-warning" onclick="resetSources()" title="Clear last-checked timestamp so next collect fetches all recent items">Reset Timestamps</button>
+    <button class="btn btn-sm btn-outline-danger" onclick="purgeSpam()" title="Delete FREE COURSE ALERT and other promotional spam from Updates">Purge Spam</button>
   </div>
   <div id="source-status-result" class="mt-3"></div>
 </div>
@@ -148,6 +149,16 @@
 
 {% block scripts %}
 <script>
+function purgeSpam() {
+  if (!confirm('Delete all "FREE COURSE ALERT" and promotional spam updates?')) return;
+  fetch('/api/purge-spam', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      alert(`Deleted ${d.deleted} spam updates.`);
+      location.reload();
+    });
+}
+
 function resetSources() {
   if (!confirm('Reset all source timestamps? Next collect will re-fetch recent items.')) return;
   fetch('/api/reset-sources', { method: 'POST' })

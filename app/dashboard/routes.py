@@ -408,6 +408,29 @@ def api_reset_sources():
     return jsonify({"ok": True, "reset": len(sources)})
 
 
+@dashboard_bp.route("/api/purge-spam", methods=["POST"])
+def api_purge_spam():
+    """Delete Telegram updates whose title contains known spam phrases."""
+    spam_phrases = [
+        "FREE COURSE ALERT", "Join Now", "Enroll Now", "Limited Seats",
+        "Offer Expires", "Registration Open", "New Batch Starting",
+        "Batch Starting", "Admission Open", "Pay Now", "Buy Now",
+    ]
+    from app.models import Post
+    deleted = 0
+    for phrase in spam_phrases:
+        matches = Update.query.filter(
+            Update.title.ilike(f"%{phrase}%")
+        ).all()
+        for u in matches:
+            # Also delete any posts generated from this update
+            Post.query.filter_by(source_update_id=u.id).delete()
+            db.session.delete(u)
+            deleted += 1
+    db.session.commit()
+    return jsonify({"ok": True, "deleted": deleted})
+
+
 @dashboard_bp.route("/api/stats")
 def api_stats():
     today = date.today()
