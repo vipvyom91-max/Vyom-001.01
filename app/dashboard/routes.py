@@ -162,17 +162,19 @@ def promote_update(uid):
     update = Update.query.get_or_404(uid)
     from app.processors.content_generator import ContentGenerator
     gen = ContentGenerator(AppConfig)
+    # Force score high enough so process_update doesn't skip it
+    if (update.relevance_score or 0) < 0.20:
+        update.relevance_score = 0.21
     post = gen.process_update(update)
     if post:
         db.session.add(post)
         update.is_queued = True
         db.session.commit()
         _bump_stat("posts_created")
-        flash(f"Draft post created from update #{uid}", "success")
+        flash(f"Draft post created!", "success")
         return redirect(url_for("dashboard.edit_post", pid=post.id))
-    else:
-        flash("Update scored too low for auto-processing. You can create a manual post.", "warning")
-        return redirect(url_for("dashboard.updates"))
+    flash("Could not create post — image generation may have failed. Try again.", "warning")
+    return redirect(url_for("dashboard.updates"))
 
 
 @dashboard_bp.route("/api/bulk-promote", methods=["POST"])
@@ -233,7 +235,9 @@ def new_post():
         _bump_stat("posts_created")
         flash("Manual post created!", "success")
         return redirect(url_for("dashboard.edit_post", pid=post.id))
-    return render_template("content_editor.html", post=None, update=None)
+    ig_configured = bool(AppConfig.INSTAGRAM_USERNAME or AppConfig.INSTAGRAM_ACCESS_TOKEN)
+    return render_template("content_editor.html", post=None, update=None,
+                           ig_configured=ig_configured)
 
 
 @dashboard_bp.route("/posts/<int:pid>")
