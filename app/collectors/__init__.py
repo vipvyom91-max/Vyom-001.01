@@ -1,11 +1,13 @@
 from app.collectors.pw_website import PWWebsiteCollector
 from app.collectors.youtube import YouTubeCollector
+from app.collectors.youtube_community import YouTubeCommunityCollector
 from app.collectors.telegram_collector import TelegramCollector
 from app.collectors.twitter_collector import TwitterCollector
 from app.collectors.rss import RSSCollector
 
 COLLECTOR_MAP = {
     "youtube": YouTubeCollector,
+    "youtube_community": YouTubeCommunityCollector,
     "telegram": TelegramCollector,
     "twitter": TwitterCollector,
     "website": PWWebsiteCollector,

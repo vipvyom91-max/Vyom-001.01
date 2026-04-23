@@ -4,24 +4,30 @@ from config import Config
 
 db = SQLAlchemy()
 
-ALL_DEFAULT_SOURCES = [
-    # ════════════════════════════════════════════════════════════════════════
-    # YOUTUBE — needs API key, but RSS fallbacks work without any key
-    # ════════════════════════════════════════════════════════════════════════
-    ("PW Alakh Pandey (YouTube)",        "youtube", "UCiGyWN6DEbnj2alu7iapuKQ"),
-    ("PW NEET Channel (YouTube)",        "youtube", "UCGw8iWmsw1cPlfcrww-3C0g"),
-    ("NCERT Wallah (YouTube)",           "youtube", "UC8zCnnfhz-dvIpVdZ1CheuA"),
+# ── Sources that are no longer valid — disable them on startup ────────────
+_DEAD_IDENTIFIERS = {
+    "https://pw.live/study-material",
+    "https://pw.live/videos",
+    "https://pw.live",
+}
 
-    # ════════════════════════════════════════════════════════════════════════
-    # YOUTUBE RSS — works without any API key
-    # ════════════════════════════════════════════════════════════════════════
+ALL_DEFAULT_SOURCES = [
+    # ── YouTube API (needs YOUTUBE_API_KEY) ───────────────────────────────
+    ("PW Alakh Pandey (YouTube)",        "youtube",           "UCiGyWN6DEbnj2alu7iapuKQ"),
+    ("PW NEET Channel (YouTube)",        "youtube",           "UCGw8iWmsw1cPlfcrww-3C0g"),
+    ("NCERT Wallah (YouTube)",           "youtube",           "UC8zCnnfhz-dvIpVdZ1CheuA"),
+
+    # ── YouTube RSS (no API key needed) ───────────────────────────────────
     ("PW Alakh Pandey (RSS)",            "rss", "https://www.youtube.com/feeds/videos.xml?channel_id=UCiGyWN6DEbnj2alu7iapuKQ"),
     ("PW NEET (RSS)",                    "rss", "https://www.youtube.com/feeds/videos.xml?channel_id=UCGw8iWmsw1cPlfcrww-3C0g"),
     ("NCERT Wallah (RSS)",               "rss", "https://www.youtube.com/feeds/videos.xml?channel_id=UC8zCnnfhz-dvIpVdZ1CheuA"),
 
-    # ════════════════════════════════════════════════════════════════════════
-    # TELEGRAM — PW official channels
-    # ════════════════════════════════════════════════════════════════════════
+    # ── YouTube Community Posts (teacher announcements, schedules) ────────
+    ("PW Alakh Pandey (Community)",      "youtube_community", "UCiGyWN6DEbnj2alu7iapuKQ"),
+    ("PW NEET (Community)",              "youtube_community", "UCGw8iWmsw1cPlfcrww-3C0g"),
+    ("NCERT Wallah (Community)",         "youtube_community", "UC8zCnnfhz-dvIpVdZ1CheuA"),
+
+    # ── Telegram — PW official channels ──────────────────────────────────
     ("PW Official Telegram",             "telegram", "physicswallah"),
     ("Alakh Pandey Telegram",            "telegram", "AlakhPandey"),
     ("PW Live Telegram",                 "telegram", "pwlive"),
@@ -32,7 +38,6 @@ ALL_DEFAULT_SOURCES = [
     ("PW Physics Telegram",              "telegram", "PWphysics"),
     ("Yakeen Batch Telegram",            "telegram", "yakeenbatch"),
     ("PW Yakeen Telegram",               "telegram", "pwyakeen"),
-    # More PW Telegram channels
     ("PW English Telegram",              "telegram", "pwenglish"),
     ("PW Foundation Telegram",           "telegram", "PWFoundation"),
     ("PW Arjuna Telegram",               "telegram", "PWArjuna"),
@@ -43,15 +48,12 @@ ALL_DEFAULT_SOURCES = [
     ("PW Biology NEET Telegram",         "telegram", "PWbiologyneet"),
     ("PW Notes Telegram",                "telegram", "pwnotes"),
     ("PW DPP Telegram",                  "telegram", "pw_dpp"),
-    ("Physics Wallah Study Telegram",    "telegram", "physicsWallahstudy"),
     ("Yakeen NEET 2025 Telegram",        "telegram", "yakeenneet2025"),
     ("Yakeen NEET 2026 Telegram",        "telegram", "yakeenneet2026"),
     ("PW Lakshya Telegram",              "telegram", "PWLakshya"),
     ("PW Vidyapeeth Telegram",           "telegram", "PWVidyapeeth"),
 
-    # ════════════════════════════════════════════════════════════════════════
-    # GOOGLE NEWS RSS — news articles and blog posts about PW/NEET
-    # ════════════════════════════════════════════════════════════════════════
+    # ── Google News RSS — articles about PW/NEET ─────────────────────────
     ("GNews: Physics Wallah NEET",       "rss", "https://news.google.com/rss/search?q=Physics+Wallah+NEET+2025&hl=en-IN&gl=IN&ceid=IN:en"),
     ("GNews: PW Class 12 PCB",           "rss", "https://news.google.com/rss/search?q=Physics+Wallah+class+12+PCB&hl=en-IN&gl=IN&ceid=IN:en"),
     ("GNews: Alakh Pandey",              "rss", "https://news.google.com/rss/search?q=Alakh+Pandey+Physics+Wallah+new&hl=en-IN&gl=IN&ceid=IN:en"),
@@ -60,9 +62,7 @@ ALL_DEFAULT_SOURCES = [
     ("GNews: NTA NEET",                  "rss", "https://news.google.com/rss/search?q=NTA+NEET+2025+notification+syllabus&hl=en-IN&gl=IN&ceid=IN:en"),
     ("GNews: PW New Batch",              "rss", "https://news.google.com/rss/search?q=Physics+Wallah+new+batch+free+class&hl=en-IN&gl=IN&ceid=IN:en"),
 
-    # ════════════════════════════════════════════════════════════════════════
-    # EDUCATION NEWS RSS — major Indian news sites education sections
-    # ════════════════════════════════════════════════════════════════════════
+    # ── Education News RSS ────────────────────────────────────────────────
     ("NDTV Education",                   "rss", "https://www.ndtv.com/rss/education"),
     ("Times of India Education",         "rss", "https://timesofindia.indiatimes.com/rssfeeds/913168846.cms"),
     ("Hindustan Times Education",        "rss", "https://www.hindustantimes.com/feeds/rss/education/rssfeed.xml"),
@@ -72,9 +72,7 @@ ALL_DEFAULT_SOURCES = [
     ("Careers360 NEET",                  "rss", "https://medicine.careers360.com/articles?format=rss"),
     ("Shiksha NEET",                     "rss", "https://www.shiksha.com/medicine-health-sciences/neet/rss"),
     ("CollegeDekho NEET",                "rss", "https://www.collegedekho.com/news/category/neet/feed/"),
-    ("GetMyUni NEET",                    "rss", "https://www.getmyuni.com/rss/neet.xml"),
     ("Embibe NEET",                      "rss", "https://www.embibe.com/exams/neet/feed/"),
-    ("Vidyarthiplus NEET",               "rss", "https://www.vidyarthiplus.com/neet/feed/"),
 ]
 
 
@@ -95,13 +93,14 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()
         _seed_default_sources()
+        _cleanup_dead_sources()
         _start_background_scheduler(app)
 
     return app
 
 
 def _seed_default_sources():
-    """Add default PW sources (idempotent — skips existing by name)."""
+    """Add any missing default sources on every startup (idempotent by name)."""
     from app.models import Source
     existing_names = {s.name for s in Source.query.all()}
     added = 0
@@ -110,6 +109,23 @@ def _seed_default_sources():
             db.session.add(Source(name=name, source_type=stype, identifier=ident))
             added += 1
     if added:
+        try:
+            db.session.commit()
+            import logging
+            logging.getLogger(__name__).info(f"Seeded {added} new sources")
+        except Exception:
+            db.session.rollback()
+
+
+def _cleanup_dead_sources():
+    """Disable sources pointing to known-dead URLs."""
+    from app.models import Source
+    changed = False
+    for src in Source.query.filter_by(is_active=True).all():
+        if src.identifier in _DEAD_IDENTIFIERS:
+            src.is_active = False
+            changed = True
+    if changed:
         try:
             db.session.commit()
         except Exception:

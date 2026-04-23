@@ -1,9 +1,11 @@
 """
 APScheduler configuration.
-Started inside the Flask application factory (app/__init__.py).
-One job: Data collection — every COLLECTION_INTERVAL_HOURS hours.
+Runs data collection every COLLECTION_INTERVAL_HOURS (default: 1 hour).
+Adds small delays between sources to avoid rate limiting.
 """
 import logging
+import time
+import random
 from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -12,6 +14,9 @@ from apscheduler.triggers.interval import IntervalTrigger
 logger = logging.getLogger(__name__)
 
 _scheduler: BackgroundScheduler | None = None
+
+# Source types that need a delay between calls to avoid rate limits
+_RATE_LIMITED_TYPES = {"telegram", "youtube", "youtube_community"}
 
 
 def get_scheduler() -> BackgroundScheduler:
@@ -23,8 +28,7 @@ def get_scheduler() -> BackgroundScheduler:
 
 def start_scheduler(app):
     scheduler = get_scheduler()
-
-    interval_h = app.config.get("COLLECTION_INTERVAL_HOURS", 3)
+    interval_h = app.config.get("COLLECTION_INTERVAL_HOURS", 1)
 
     scheduler.add_job(
         func=_run_collection,
@@ -47,8 +51,8 @@ def _run_collection(app):
         from app.collectors import get_collector_for_source
         from app.processors.content_generator import ContentGenerator
         from app import db
-
         from config import Config
+
         sources = Source.query.filter_by(is_active=True).all()
         if not sources:
             logger.info("No active sources configured")
@@ -56,6 +60,7 @@ def _run_collection(app):
 
         gen = ContentGenerator(Config)
         total_collected = 0
+        total_posts = 0
 
         for source in sources:
             try:
@@ -64,7 +69,6 @@ def _run_collection(app):
                 saved = collector.save_updates(db.session, raw_items)
                 total_collected += saved
 
-                # Process newly collected updates
                 new_updates = Update.query.filter_by(
                     source_id=source.id, is_processed=False
                 ).all()
@@ -74,17 +78,24 @@ def _run_collection(app):
                     if post:
                         db.session.add(post)
                         posts_created += 1
+                total_posts += posts_created
                 db.session.commit()
 
                 source.last_checked_at = datetime.utcnow()
                 db.session.commit()
 
-                logger.info(
-                    f"[{source.name}] collected={saved} posts_created={posts_created}"
-                )
+                if saved or posts_created:
+                    logger.info(f"[{source.name}] saved={saved} posts={posts_created}")
+
+                # Brief pause between rate-limited sources
+                if source.source_type in _RATE_LIMITED_TYPES:
+                    time.sleep(random.uniform(1.0, 2.5))
+
             except Exception as e:
                 logger.error(f"Collection failed for {source.name}: {e}")
                 db.session.rollback()
+
+        logger.info(f"Collection complete — updates={total_collected} posts={total_posts}")
 
         # Update daily stats
         try:
@@ -94,9 +105,8 @@ def _run_collection(app):
             if not stat:
                 stat = DailyStat(date=today)
                 db.session.add(stat)
-            stat.updates_collected += total_collected
+            stat.updates_collected = (stat.updates_collected or 0) + total_collected
+            stat.posts_created = (stat.posts_created or 0) + total_posts
             db.session.commit()
         except Exception as e:
             logger.error(f"Stats update failed: {e}")
-
-

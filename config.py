@@ -46,8 +46,8 @@ class Config:
     # Anthropic / Claude
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
-    # Scheduler
-    COLLECTION_INTERVAL_HOURS = int(os.environ.get("COLLECTION_INTERVAL_HOURS", "3"))
+    # Scheduler — default every 1 hour; override with COLLECTION_INTERVAL_HOURS env var
+    COLLECTION_INTERVAL_HOURS = int(os.environ.get("COLLECTION_INTERVAL_HOURS", "1"))
 
     # App
     DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
