@@ -95,6 +95,7 @@ def create_app(config_class=Config):
         _seed_default_sources()
         _cleanup_dead_sources()
         _start_background_scheduler(app)
+        _auto_collect_if_empty(app)
 
     return app
 
@@ -139,3 +140,44 @@ def _start_background_scheduler(app):
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Scheduler not started: {e}")
+
+
+def _auto_collect_if_empty(app):
+    """On first ever run (0 updates in DB), kick off an RSS-only collect in background."""
+    import threading, logging
+    from app.models import Update
+    log = logging.getLogger(__name__)
+    if Update.query.count() > 0:
+        return
+
+    def _run():
+        with app.app_context():
+            try:
+                from app.models import Source
+                from app.collectors import get_collector_for_source
+                from app.processors.content_generator import ContentGenerator
+                from config import Config
+                rss_sources = Source.query.filter_by(is_active=True, source_type="rss").all()
+                gen = ContentGenerator(Config)
+                total = 0
+                for src in rss_sources[:15]:  # first 15 RSS sources
+                    try:
+                        col = get_collector_for_source(src, Config)
+                        items = col.collect()
+                        saved = col.save_updates(db.session, items)
+                        total += saved
+                        for upd in Update.query.filter_by(source_id=src.id, is_processed=False).all():
+                            post = gen.process_update(upd)
+                            if post:
+                                db.session.add(post)
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                log.info(f"Auto first-run collect: {total} updates from RSS")
+            except Exception as e:
+                log.warning(f"Auto collect failed: {e}")
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    import logging
+    logging.getLogger(__name__).info("First run detected — auto-collecting RSS sources in background...")

@@ -3,6 +3,16 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
+{% if total_updates == 0 %}
+<div class="alert alert-info d-flex align-items-center gap-3 mb-3" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:10px">
+  <span style="font-size:2rem">⏳</span>
+  <div>
+    <strong>Collecting your first batch of updates…</strong><br>
+    <small class="text-muted">RSS sources are loading in the background. This takes about 30–60 seconds. This page will refresh automatically.</small>
+  </div>
+</div>
+<script>setTimeout(() => location.reload(), 15000);</script>
+{% endif %}
 <!-- Stat cards -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
