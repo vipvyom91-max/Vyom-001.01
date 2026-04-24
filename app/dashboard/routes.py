@@ -50,7 +50,7 @@ def _bump_stat(field: str, delta: int = 1):
     if not stat:
         stat = DailyStat(date=today)
         db.session.add(stat)
-    setattr(stat, field, getattr(stat, field) + delta)
+    setattr(stat, field, (getattr(stat, field) or 0) + delta)
     db.session.commit()
 
 
