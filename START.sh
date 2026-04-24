@@ -29,15 +29,21 @@ git pull origin claude/pw-pcb-updates-app-bNCnt 2>/dev/null || echo "  (already 
 
 # ── Step 2: Install Python packages ──────────────────────────────────────
 echo -e "${YELLOW}[2/6] Installing Python packages...${NC}"
-# Fix setuptools first
-pip install -q --upgrade setuptools wheel 2>/dev/null || true
-# Install native packages via pkg (no build needed)
-pkg install -y python-pillow python-lxml 2>/dev/null || true
-# Install Python packages (ignore build errors for optional ones)
-pip install -q flask flask-sqlalchemy sqlalchemy requests feedparser \
-    python-dotenv apscheduler pytz humanize anthropic 2>/dev/null || true
-pip install -q telethon tweepy google-api-python-client instagrapi \
-    beautifulsoup4 aiohttp 2>/dev/null || true
+# Install packages that need C compilation via pkg (avoids setuptools issue)
+pkg install -y python-pillow python-lxml python-cryptography 2>/dev/null || true
+# Install pure-Python packages via pip (no compilation needed)
+pip install -q --no-build-isolation \
+    flask flask-sqlalchemy sqlalchemy \
+    requests feedparser python-dotenv \
+    apscheduler pytz humanize anthropic \
+    telethon tweepy beautifulsoup4 \
+    google-api-python-client aiohttp \
+    instagrapi 2>/dev/null || \
+pip install -q \
+    flask flask-sqlalchemy sqlalchemy \
+    requests feedparser python-dotenv \
+    apscheduler pytz humanize anthropic \
+    telethon tweepy beautifulsoup4 2>/dev/null || true
 echo -e "  ${GREEN}✓ Packages ready${NC}"
 
 # ── Step 3: Create .env if missing ───────────────────────────────────────
