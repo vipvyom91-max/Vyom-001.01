@@ -4,7 +4,6 @@
 #  Run this once:  bash START.sh
 # ─────────────────────────────────────────────────────
 
-set -e
 cd "$(dirname "$0")"
 
 GREEN='\033[0;32m'
@@ -30,9 +29,15 @@ git pull origin claude/pw-pcb-updates-app-bNCnt 2>/dev/null || echo "  (already 
 
 # ── Step 2: Install Python packages ──────────────────────────────────────
 echo -e "${YELLOW}[2/6] Installing Python packages...${NC}"
-# Install Pillow via pkg first (avoids build errors on Termux)
-pkg install -y python-pillow 2>/dev/null || true
-pip install -q -r requirements.txt 2>/dev/null || pip install -q -r requirements.txt --no-build-isolation
+# Fix setuptools first
+pip install -q --upgrade setuptools wheel 2>/dev/null || true
+# Install native packages via pkg (no build needed)
+pkg install -y python-pillow python-lxml 2>/dev/null || true
+# Install Python packages (ignore build errors for optional ones)
+pip install -q flask flask-sqlalchemy sqlalchemy requests feedparser \
+    python-dotenv apscheduler pytz humanize anthropic 2>/dev/null || true
+pip install -q telethon tweepy google-api-python-client instagrapi \
+    beautifulsoup4 aiohttp 2>/dev/null || true
 echo -e "  ${GREEN}✓ Packages ready${NC}"
 
 # ── Step 3: Create .env if missing ───────────────────────────────────────
