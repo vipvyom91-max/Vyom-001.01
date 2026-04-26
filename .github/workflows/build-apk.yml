@@ -1,0 +1,79 @@
+name: Build PW PCB Manager APK
+
+on:
+  push:
+    branches:
+      - claude/pw-pcb-updates-app-bNCnt
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Build Tools
+        run: |
+          yes | sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" 2>/dev/null || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.6'
+
+      - name: Make gradlew executable (if present)
+        run: |
+          if [ -f android/gradlew ]; then chmod +x android/gradlew; fi
+
+      - name: Build Debug APK
+        working-directory: android
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Find APK
+        run: |
+          find android -name "*.apk" -type f
+          APK=$(find android -name "*debug*.apk" | head -1)
+          echo "APK_PATH=$APK" >> $GITHUB_ENV
+          echo "Found APK: $APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PW-PCB-Manager-debug
+          path: ${{ env.APK_PATH }}
+          retention-days: 30
+
+      - name: Create Release on tag
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.APK_PATH }}
+          name: PW PCB Manager ${{ github.ref_name }}
+          body: |
+            ## PW PCB Manager APK
+
+            ### How to install
+            1. Download `app-debug.apk` below
+            2. On your Android phone: Settings → Security → Allow unknown sources
+            3. Open the downloaded APK to install
+            4. Start the server first in Termux: `bash ~/Vyom-001.01/START.sh`
+            5. Open **PW PCB Manager** app — it loads the dashboard automatically
+
+            ### Requirements
+            - Termux running with the Flask server (`bash START.sh`)
+            - Android 5.0+ (API 21+)
